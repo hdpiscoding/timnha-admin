@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/input-password";
 //import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import {Spinner} from "@/components/ui/spinner.tsx";
 
 export default function Login() {
     //const navigate = useNavigate();
@@ -93,9 +94,10 @@ export default function Login() {
                                             <FormLabel>Email</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    placeholder="admin@example.com"
+                                                    placeholder="Nhập email"
                                                     type="email"
                                                     autoComplete="email"
+                                                    className="focus-visible:ring-[#008DDA] focus-visible:border-none"
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -117,6 +119,7 @@ export default function Login() {
                                                 <PasswordInput
                                                     placeholder="Nhập mật khẩu"
                                                     autoComplete="current-password"
+                                                    className="focus-visible:ring-[#008DDA] focus-visible:border-none"
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -127,10 +130,10 @@ export default function Login() {
 
                                 <Button
                                     type="submit"
-                                    className="w-full"
-                                    disabled={isLoading}
+                                    className={`w-full transition-colors duration-200 ${isLoading ? "bg-[#0064A6]" : "bg-[#008DDA] cursor-pointer"} hover:bg-[#0064A6] `}
                                 >
-                                    {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                                    {isLoading ? <Spinner/> : null}
+                                    Đăng nhập
                                 </Button>
                             </form>
                         </Form>

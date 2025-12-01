@@ -47,16 +47,16 @@ export default function Login() {
     return (
         <div className="min-h-screen flex w-full">
             {/* Left side - 30% - Hidden on mobile */}
-            <div className="hidden lg:flex lg:w-[30%] bg-gradient-to-br from-[#008DDA] to-[#0066A1] flex-col items-center justify-center p-8">
+            <div className="hidden lg:flex lg:w-[30%] bg-white flex-col items-center justify-center p-8">
                 <div className="text-center space-y-6">
                     <img
                         src="/src/assets/timnha-portrait.png"
                         alt="TimNha Logo"
                         className="w-48 h-auto mx-auto"
                     />
-                    <div className="text-white">
+                    <div className="text-gray-600">
                         <h1 className="text-3xl font-bold mb-2">Trang Quản Trị</h1>
-                        <p className="text-lg text-blue-100">
+                        <p className="text-lg text-gray-400">
                             Quản lý nền tảng bất động sản
                         </p>
                     </div>

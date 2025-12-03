@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PropertyListItem } from "@/components/property-list-item";
 import { ControlledPagination } from "@/components/ui/controlled-pagination";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
     Select,
     SelectContent,
@@ -9,6 +10,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { ListingFilterDialog, type FilterValues } from "@/components/listing-filter-dialog";
 import { Filter } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -31,6 +33,21 @@ export default function PropertyManagement() {
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
+
+    // Filter Dialog State
+    const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+    const [filters, setFilters] = useState<FilterValues>({
+        approvalStatus: null,
+        title: null,
+        listingType: null,
+        price: null,
+        area: null,
+        propertyType: null,
+        numBedrooms: null,
+        numBathrooms: null,
+        numFloors: null,
+        addressDistrict: null,
+    });
 
     // Fetch Properties
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -105,10 +122,38 @@ export default function PropertyManagement() {
         setCurrentPage(1); // Reset to first page when sorting changes
     };
 
+    // Count active filters
+    const getActiveFiltersCount = () => {
+        let count = 0;
+        if (filters.approvalStatus !== null) count++;
+        if (filters.title !== null) count++;
+        if (filters.listingType !== null) count++;
+        if (filters.price !== null) count++;
+        if (filters.area !== null) count++;
+        if (filters.propertyType !== null) count++;
+        if (filters.numBedrooms !== null) count++;
+        if (filters.numBathrooms !== null) count++;
+        if (filters.numFloors !== null) count++;
+        if (filters.addressDistrict !== null) count++;
+        return count;
+    };
+
     // Handle Filter Click
     const handleFilterClick = () => {
-        // TODO: Implement filter modal or drawer
-        toast.info("Chức năng lọc đang được phát triển");
+        setFilterDialogOpen(true);
+    };
+
+    // Handle Apply Filter
+    const handleApplyFilter = (newFilters: FilterValues) => {
+        setFilters(newFilters);
+        setCurrentPage(1); // Reset to first page when filters change
+
+        // TODO: Call API with filters
+        console.log("Applied filters:", newFilters);
+        toast.success("Đã áp dụng bộ lọc");
+
+        // For now, just refresh with current sort
+        fetchProperties(1, sortBy);
     };
 
     // Effects
@@ -131,14 +176,24 @@ export default function PropertyManagement() {
                 <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
                     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                         {/* Filter Button */}
-                        <Button
-                            onClick={handleFilterClick}
-                            variant="outline"
-                            className="flex items-center gap-2 cursor-pointer"
-                        >
-                            <Filter className="w-4 h-4" />
-                            Lọc
-                        </Button>
+                        <div className="relative">
+                            <Button
+                                onClick={handleFilterClick}
+                                variant="outline"
+                                className="flex items-center gap-2 cursor-pointer"
+                            >
+                                <Filter className="w-4 h-4" />
+                                Lọc
+                            </Button>
+                            {getActiveFiltersCount() > 0 && (
+                                <Badge
+                                    variant="default"
+                                    className="absolute -top-2 -right-2 h-5 min-w-5 px-1 bg-[#008DDA] hover:bg-[#008DDA]"
+                                >
+                                    {getActiveFiltersCount()}
+                                </Badge>
+                            )}
+                        </div>
 
                         {/* Sort Select */}
                         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -196,6 +251,14 @@ export default function PropertyManagement() {
                     </div>
                 </div>
             </div>
+
+            {/* Filter Dialog */}
+            <ListingFilterDialog
+                open={filterDialogOpen}
+                onOpenChange={setFilterDialogOpen}
+                onApplyFilter={handleApplyFilter}
+                initialFilters={filters}
+            />
         </div>
     );
 }

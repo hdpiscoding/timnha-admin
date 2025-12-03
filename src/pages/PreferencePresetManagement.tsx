@@ -9,7 +9,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Filter, Plus } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Filter, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import type { PreferencePreset } from "@/types/preference-preset";
 
@@ -21,6 +31,10 @@ export default function PreferencePresetManagement() {
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
+
+    // Alert Dialog State
+    const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+    const [presetToDelete, setPresetToDelete] = useState<PreferencePreset | null>(null);
 
     // Fetch Preference Presets
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -134,6 +148,33 @@ export default function PreferencePresetManagement() {
         toast.info("Chi tiết bộ ưu tiên đang được phát triển");
     };
 
+    // Handle Delete Click - Open dialog
+    const handleDeleteClick = (preset: PreferencePreset) => {
+        setPresetToDelete(preset);
+        setAlertDialogOpen(true);
+    };
+
+    // Handle Delete Confirm
+    const handleDeleteConfirm = async () => {
+        if (!presetToDelete) return;
+
+        try {
+            // TODO: Call API to delete preset
+            // await deletePreferencePreset(presetToDelete.id);
+
+            toast.success(`Đã xóa bộ ưu tiên "${presetToDelete.name}" thành công`);
+
+            // Refresh list
+            fetchPresets(currentPage, sortBy);
+        } catch (error) {
+            console.error("Error deleting preset:", error);
+            toast.error("Có lỗi xảy ra, vui lòng thử lại");
+        } finally {
+            setAlertDialogOpen(false);
+            setPresetToDelete(null);
+        }
+    };
+
     // Effects
     useEffect(() => {
         fetchPresets(currentPage, sortBy);
@@ -210,11 +251,28 @@ export default function PreferencePresetManagement() {
                         ) : (
                             <div className="space-y-4">
                                 {presets.map((preset) => (
-                                    <PreferencePresetListItem
+                                    <div
                                         key={preset.id}
-                                        preset={preset}
-                                        onClick={() => handlePresetClick(preset.id)}
-                                    />
+                                        className="flex items-center gap-4"
+                                    >
+                                        <div className="flex-1">
+                                            <PreferencePresetListItem
+                                                preset={preset}
+                                                onClick={() => handlePresetClick(preset.id)}
+                                            />
+                                        </div>
+                                        <div className="flex-shrink-0">
+                                            <Button
+                                                onClick={() => handleDeleteClick(preset)}
+                                                variant="destructive"
+                                                size="sm"
+                                                className="cursor-pointer"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-1" />
+                                                Xóa
+                                            </Button>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -231,6 +289,30 @@ export default function PreferencePresetManagement() {
                     </div>
                 </div>
             </div>
+
+            {/* Alert Dialog */}
+            <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Xác nhận xóa bộ ưu tiên</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bạn có chắc chắn muốn xóa bộ ưu tiên "{presetToDelete?.name}" không?
+                            Hành động này không thể hoàn tác.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="cursor-pointer" onClick={() => setAlertDialogOpen(false)}>
+                            Hủy
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            className="cursor-pointer"
+                            onClick={handleDeleteConfirm}
+                        >
+                            Xác nhận
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

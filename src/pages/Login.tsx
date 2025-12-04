@@ -10,13 +10,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/input-password";
-//import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {Spinner} from "@/components/ui/spinner.tsx";
+import {login} from "@/services/authServices.ts";
+import {useUserStore} from "@/stores/userStore.ts";
+import {toast} from "react-toastify";
 
 export default function Login() {
-    //const navigate = useNavigate();
+    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const loginData = useUserStore((state) => state.login);
 
     const form = useForm({
         defaultValues: {
@@ -29,17 +33,15 @@ export default function Login() {
     const onSubmit = async (data: { email: string; password: string }) => {
         setIsLoading(true);
         try {
-            // TODO: Call API login admin here
-            console.log("Admin login data:", data);
-
-            // Temporary: Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            // TODO: Handle successful login and navigate to admin dashboard
-            // navigate("/admin/dashboard");
+            const response = await login(data.email, data.password);
+            if (response.status === "200") {
+                loginData(response.data.token);
+                toast.success("Đăng nhập thành công!");
+                navigate("/");
+            }
         } catch (error) {
-            console.error("Login failed:", error);
-            // TODO: Show error message
+            toast.error("Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.");
+            console.error("Error logging in:", error);
         } finally {
             setIsLoading(false);
         }

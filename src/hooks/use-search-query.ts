@@ -1,7 +1,5 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getDistrictNameById, getDistrictIdByName } from "@/utils/districtHelper";
-import { getPriceRangeValue, getPriceRangeId } from "@/utils/priceRangesHelper";
 
 export type Operator = "eq" | "gt" | "lt" | "gte" | "lte" | "lk" | "rng";
 export type SortType = "ASC" | "DESC";
@@ -34,25 +32,12 @@ export const useSearchQuery = () => {
             const operator = parts.pop() as Operator;
             const key = parts.join("_");
 
-            let finalValue = value;
-            if (key === "addressDistrict") {
-                const districtName = getDistrictNameById(value);
-                if (districtName) {
-                    finalValue = districtName;
-                }
-            }
-
-            if (key === "price" && operator === "rng") {
-                const priceRange = getPriceRangeValue(value);
-                if (priceRange) {
-                    finalValue = priceRange;
-                }
-            }
-
+            // Keep value as-is from URL - no automatic conversion
+            // Components should handle their own value conversions based on their needs
             result.push({
                 key,
                 operator,
-                value: finalValue,
+                value: value,
             });
         });
 
@@ -84,119 +69,184 @@ export const useSearchQuery = () => {
         return pageParam ? parseInt(pageParam, 10) : 1;
     }, [searchParams]);
 
-    // Set filter
+    // Set single filter
     const setFilter = useCallback(
         (key: string, operator: Operator, value: string | number) => {
-            const params = new URLSearchParams(searchParams);
-            const fullKey = `${key}_${operator}`;
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
+                const fullKey = `${key}_${operator}`;
 
-            if (value === "" || value === null || value === undefined) {
-                params.delete(fullKey);
-            } else {
-                let finalValue = String(value);
-                if (key === "addressDistrict") {
-                    const districtId = getDistrictIdByName(String(value));
-                    if (districtId) {
-                        finalValue = districtId;
-                    }
+                if (value === "" || value === null || value === undefined) {
+                    params.delete(fullKey);
+                } else {
+                    // Store value as-is - components handle their own conversions
+                    params.set(fullKey, String(value));
                 }
 
-                if (key === "price" && operator === "rng") {
-                    const priceRangeId = getPriceRangeId(String(value));
-                    if (priceRangeId) {
-                        finalValue = priceRangeId;
-                    }
-                }
-
-                params.set(fullKey, finalValue);
-            }
-
-            setSearchParams(params);
+                return params;
+            });
         },
-        [searchParams, setSearchParams]
+        [setSearchParams]
     );
 
-    // Set sort
+    // Set multiple filters at once
+    const setMultipleFilters = useCallback(
+        (updates: Array<{ key: string; operator: Operator; value: string | number }>, resetPage = false) => {
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
+
+                updates.forEach(({ key, operator, value }) => {
+                    const fullKey = `${key}_${operator}`;
+
+                    if (value === "" || value === null || value === undefined) {
+                        params.delete(fullKey);
+                    } else {
+                        // Store value as-is - components handle their own conversions
+                        params.set(fullKey, String(value));
+                    }
+                });
+
+                // Reset page to 1 if requested (atomic operation)
+                if (resetPage) {
+                    params.set("page", "1");
+                }
+
+                return params;
+            });
+        },
+        [setSearchParams]
+    );
+
     const setSort = useCallback(
         (key: string, type: SortType | null) => {
-            const params = new URLSearchParams(searchParams);
-            const fullKey = `sort_${key}`;
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
+                const fullKey = `sort_${key}`;
 
-            if (type === null || type === undefined) {
-                params.delete(fullKey);
-            } else {
-                params.set(fullKey, type);
-            }
+                if (type === null || type === undefined) {
+                    params.delete(fullKey);
+                } else {
+                    params.set(fullKey, type);
+                }
 
-            setSearchParams(params);
+                return params;
+            });
         },
-        [searchParams, setSearchParams]
+        [setSearchParams]
     );
 
-    // Remove sort
-    const removeSort = useCallback(
-        (key: string) => {
-            const params = new URLSearchParams(searchParams);
-            params.delete(`sort_${key}`);
-            setSearchParams(params);
-        },
-        [searchParams, setSearchParams]
-    );
-
-    // Clear all sorts
-    const clearSorts = useCallback(() => {
-        const params = new URLSearchParams(searchParams);
-
-        sorts.forEach((s) => {
-            params.delete(`sort_${s.key}`);
-        });
-
-        setSearchParams(params);
-    }, [searchParams, sorts, setSearchParams]);
-
-    // Set page
     const setPage = useCallback(
         (pageNumber: number) => {
-            const params = new URLSearchParams(searchParams);
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
 
-            if (pageNumber <= 0) {
-                params.delete("page");
-            } else {
-                params.set("page", String(pageNumber));
-            }
+                if (pageNumber <= 0) {
+                    params.delete("page");
+                } else {
+                    params.set("page", String(pageNumber));
+                }
 
-            setSearchParams(params);
+                return params;
+            });
         },
-        [searchParams, setSearchParams]
+        [setSearchParams]
     );
 
-    // Remove filter
     const removeFilter = useCallback(
         (key: string, operator: Operator) => {
-            const params = new URLSearchParams(searchParams);
-            params.delete(`${key}_${operator}`);
-            setSearchParams(params);
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
+                params.delete(`${key}_${operator}`);
+                return params;
+            });
         },
-        [searchParams, setSearchParams]
+        [setSearchParams]
     );
 
-    // Clear all filters
+    const removeSort = useCallback(
+        (key: string) => {
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
+                params.delete(`sort_${key}`);
+                return params;
+            });
+        },
+        [setSearchParams]
+    );
+
     const clearFilters = useCallback(() => {
-        const params = new URLSearchParams(searchParams);
+        setSearchParams((prevParams) => {
+            const params = new URLSearchParams(prevParams);
 
-        filters.forEach((f) => {
-            params.delete(`${f.key}_${f.operator}`);
+            // Lấy list filters từ prevParams
+            const filtersToRemove: string[] = [];
+            prevParams.forEach((_, fullKey) => {
+                if (!fullKey.startsWith("sort_") && fullKey !== "page") {
+                    const parts = fullKey.split("_");
+                    if (parts.length >= 2) {
+                        filtersToRemove.push(fullKey);
+                    }
+                }
+            });
+
+            filtersToRemove.forEach((key) => params.delete(key));
+            return params;
         });
+    }, [setSearchParams]);
 
-        setSearchParams(params);
-    }, [searchParams, filters, setSearchParams]);
+    const clearSorts = useCallback(() => {
+        setSearchParams((prevParams) => {
+            const params = new URLSearchParams(prevParams);
+
+            const sortsToRemove: string[] = [];
+            prevParams.forEach((_, fullKey) => {
+                if (fullKey.startsWith("sort_")) {
+                    sortsToRemove.push(fullKey);
+                }
+            });
+
+            sortsToRemove.forEach((key) => params.delete(key));
+            return params;
+        });
+    }, [setSearchParams]);
+
+    // Set single sort - clears all existing sorts and sets new one (atomic operation)
+    const setSingleSort = useCallback(
+        (key: string, type: SortType, resetPage = false) => {
+            setSearchParams((prevParams) => {
+                const params = new URLSearchParams(prevParams);
+
+                // 1. Remove all existing sort params
+                const sortsToRemove: string[] = [];
+                prevParams.forEach((_, fullKey) => {
+                    if (fullKey.startsWith("sort_")) {
+                        sortsToRemove.push(fullKey);
+                    }
+                });
+                sortsToRemove.forEach((sortKey) => params.delete(sortKey));
+
+                // 2. Add new sort
+                params.set(`sort_${key}`, type);
+
+                // 3. Reset page to 1 if requested (atomic operation)
+                if (resetPage) {
+                    params.set("page", "1");
+                }
+
+                return params;
+            });
+        },
+        [setSearchParams]
+    );
 
     return {
         filters,
         sorts,
         page,
         setFilter,
+        setMultipleFilters,
         setSort,
+        setSingleSort,
         setPage,
         removeFilter,
         removeSort,

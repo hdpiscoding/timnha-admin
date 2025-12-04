@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-toastify';
+import {useUserStore} from "@/stores/userStore.ts";
 
 interface SidebarItemProps {
     icon: React.ReactNode;
@@ -28,7 +29,6 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
                                                      onClick
                                                  }) => {
     const navigate = useNavigate();
-
     const handleClick = () => {
         if (onClick) {
             onClick();
@@ -101,9 +101,11 @@ const BottomNavItem: React.FC<SidebarItemProps> = ({
 export const AdminSidebar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const logout = useUserStore((state) => state.logout);
 
     const handleLogout = () => {
         // TODO: Clear admin auth state
+        logout();
         navigate('/dang-nhap');
         toast.success("Đăng xuất thành công!");
         console.log('Admin logging out...');

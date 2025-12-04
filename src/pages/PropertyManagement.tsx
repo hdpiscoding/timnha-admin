@@ -13,6 +13,12 @@ import {
 import { ListingFilterDialog, type FilterValues } from "@/components/listing-filter-dialog";
 import { Filter } from "lucide-react";
 import { toast } from "react-toastify";
+import { searchProperties } from "@/services/propertyServices";
+import type { PropertyListing } from "@/types/property-listing";
+import { useSearchQuery } from "@/hooks/use-search-query";
+import { getPriceRangeValue } from "@/utils/priceRangesHelper";
+import { getAreaRangeValue } from "@/utils/areaRangeHelper";
+import { getDistrictNameById } from "@/utils/districtHelper";
 
 // Types
 interface Property {
@@ -29,113 +35,46 @@ type SortOption = "newest" | "oldest" | "price-asc" | "price-desc" | "area-asc" 
 
 export default function PropertyManagement() {
     const [properties, setProperties] = useState<Property[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
 
+    // Use search query hook for URL sync
+    const { filters, sorts, page, setMultipleFilters, setSingleSort, setPage } = useSearchQuery();
+
     // Filter Dialog State
     const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-    const [filters, setFilters] = useState<FilterValues>({
-        approvalStatus: null,
-        title: null,
-        listingType: null,
-        price: null,
-        area: null,
-        propertyType: null,
-        numBedrooms: null,
-        numBathrooms: null,
-        numFloors: null,
-        addressDistrict: null,
-    });
-
-    // Fetch Properties
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchProperties = async (_page: number, _sort: SortOption) => {
-        setIsLoading(true);
-        try {
-            // TODO: Call API to get properties
-            // const response = await getProperties(_page, _sort);
-
-            // Mock data
-            const mockProperties: Property[] = [
-                {
-                    id: "1",
-                    title: "Bán nhà mặt tiền đường Lê Văn Việt, Quận 9",
-                    price: 5000000000,
-                    area: 80,
-                    address: "Đường Lê Văn Việt, Quận 9, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-15T10:30:00Z",
-                },
-                {
-                    id: "2",
-                    title: "Cho thuê căn hộ cao cấp Vinhomes Central Park",
-                    price: 15000000,
-                    area: 70,
-                    address: "Vinhomes Central Park, Bình Thạnh, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-14T15:20:00Z",
-                },
-                {
-                    id: "3",
-                    title: "Bán biệt thự cao cấp khu Thảo Điền",
-                    price: 15000000000,
-                    area: 200,
-                    address: "Khu Thảo Điền, Quận 2, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-13T09:15:00Z",
-                },
-                {
-                    id: "4",
-                    title: "Cho thuê mặt bằng kinh doanh đường Trần Hưng Đạo",
-                    price: 30000000,
-                    area: 100,
-                    address: "Đường Trần Hưng Đạo, Quận 1, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-12T14:45:00Z",
-                },
-                {
-                    id: "5",
-                    title: "Bán nhà phố 3 tầng khu Bình Tân",
-                    price: 3500000000,
-                    area: 60,
-                    address: "Quận Bình Tân, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-11T11:20:00Z",
-                },
-            ];
-
-            setProperties(mockProperties);
-            setTotalPages(5); // Mock total pages
-        } catch (error) {
-            console.error("Error fetching properties:", error);
-            toast.error("Không thể tải danh sách tin đăng");
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     // Handle Sort Change
     const handleSortChange = (value: SortOption) => {
         setSortBy(value);
-        setCurrentPage(1); // Reset to first page when sorting changes
+
+        // Use setSingleSort from hook to clear all sorts and set new one atomically (with page reset)
+        switch (value) {
+            case "newest":
+                setSingleSort("createdAt", "DESC", false);
+                break;
+            case "oldest":
+                setSingleSort("createdAt", "ASC", false);
+                break;
+            case "price-desc":
+                setSingleSort("price", "DESC", false);
+                break;
+            case "price-asc":
+                setSingleSort("price", "ASC", false);
+                break;
+            case "area-desc":
+                setSingleSort("area", "DESC", false);
+                break;
+            case "area-asc":
+                setSingleSort("area", "ASC", false);
+                break;
+        }
     };
 
     // Count active filters
     const getActiveFiltersCount = () => {
-        let count = 0;
-        if (filters.approvalStatus !== null) count++;
-        if (filters.title !== null) count++;
-        if (filters.listingType !== null) count++;
-        if (filters.price !== null) count++;
-        if (filters.area !== null) count++;
-        if (filters.propertyType !== null) count++;
-        if (filters.numBedrooms !== null) count++;
-        if (filters.numBathrooms !== null) count++;
-        if (filters.numFloors !== null) count++;
-        if (filters.addressDistrict !== null) count++;
-        return count;
+        return filters.length;
     };
 
     // Handle Filter Click
@@ -143,23 +82,172 @@ export default function PropertyManagement() {
         setFilterDialogOpen(true);
     };
 
-    // Handle Apply Filter
-    const handleApplyFilter = (newFilters: FilterValues) => {
-        setFilters(newFilters);
-        setCurrentPage(1); // Reset to first page when filters change
+    // Build initial filters from URL filters for dialog
+    const getInitialFiltersForDialog = (): FilterValues => {
+        // Find filters from URL
+        const approvalStatusFilter = filters.find(f => f.key === 'approvalStatus' && f.operator === 'eq');
+        const listingTypeFilter = filters.find(f => f.key === 'listingType' && f.operator === 'eq');
+        const propertyTypeFilter = filters.find(f => f.key === 'propertyType' && f.operator === 'eq');
+        const priceFilter = filters.find(f => f.key === 'price' && f.operator === 'rng');
+        const areaFilter = filters.find(f => f.key === 'area' && f.operator === 'rng');
+        const districtFilter = filters.find(f => f.key === 'addressDistrict' && f.operator === 'eq');
+        const titleFilter = filters.find(f => f.key === 'title' && f.operator === 'lk');
+        const numBedroomsFilter = filters.find(f => f.key === 'numBedrooms' && f.operator === 'eq');
+        const numBathroomsFilter = filters.find(f => f.key === 'numBathrooms' && f.operator === 'eq');
+        const numFloorsFilter = filters.find(f => f.key === 'numFloors' && f.operator === 'eq');
 
-        // TODO: Call API with filters
-        console.log("Applied filters:", newFilters);
-        toast.success("Đã áp dụng bộ lọc");
-
-        // For now, just refresh with current sort
-        fetchProperties(1, sortBy);
+        return {
+            approvalStatus: approvalStatusFilter ? approvalStatusFilter.value as "NONE" | "PENDING" | "APPROVED" | "REJECTED" : null,
+            listingType: listingTypeFilter ? listingTypeFilter.value as "for_sale" | "for_rent" : null,
+            propertyType: propertyTypeFilter ? { id: propertyTypeFilter.value, name: propertyTypeFilter.value } : null,
+            price: priceFilter ? priceFilter.value : null,
+            area: areaFilter ? areaFilter.value : null,
+            addressDistrict: districtFilter ? { id: districtFilter.value, name: getDistrictNameById(districtFilter.value) || districtFilter.value } : null,
+            title: titleFilter ? titleFilter.value : null,
+            numBedrooms: numBedroomsFilter ? parseInt(numBedroomsFilter.value) : null,
+            numBathrooms: numBathroomsFilter ? parseInt(numBathroomsFilter.value) : null,
+            numFloors: numFloorsFilter ? parseInt(numFloorsFilter.value) : null,
+        };
     };
 
-    // Effects
+    // Handle Apply Filter
+    const handleApplyFilter = (newFilters: FilterValues) => {
+        setMultipleFilters([
+            { key: "approvalStatus", operator: "eq", value: newFilters.approvalStatus || "" },
+            { key: "listingType", operator: "eq", value: newFilters.listingType || "" },
+            { key: "propertyType", operator: "eq", value: newFilters.propertyType?.id || "" },
+            { key: "price", operator: "rng", value: newFilters.price || "" }, // Store ID in URL
+            { key: "area", operator: "rng", value: newFilters.area || "" }, // Store ID in URL
+            { key: "addressDistrict", operator: "eq", value: newFilters.addressDistrict?.id || "" }, // Store ID in URL
+            { key: "title", operator: "lk", value: newFilters.title?.trim() || "" },
+            { key: "numBedrooms", operator: "eq", value: newFilters.numBedrooms || "" },
+            { key: "numBathrooms", operator: "eq", value: newFilters.numBathrooms || "" },
+            { key: "numFloors", operator: "eq", value: newFilters.numFloors || "" },
+        ], true); // Reset page to 1 atomically
+        toast.success("Đã áp dụng bộ lọc");
+    };
+
+    // Sync sortBy state with URL sorts
     useEffect(() => {
-        fetchProperties(currentPage, sortBy);
-    }, [currentPage, sortBy]);
+        if (sorts.length > 0) {
+            const sort = sorts[0]; // Take first sort
+            const sortKey = `${sort.key}-${sort.type.toLowerCase()}`;
+
+            switch (sortKey) {
+                case "createdAt-desc":
+                    setSortBy("newest");
+                    break;
+                case "createdAt-asc":
+                    setSortBy("oldest");
+                    break;
+                case "price-desc":
+                    setSortBy("price-desc");
+                    break;
+                case "price-asc":
+                    setSortBy("price-asc");
+                    break;
+                case "area-desc":
+                    setSortBy("area-desc");
+                    break;
+                case "area-asc":
+                    setSortBy("area-asc");
+                    break;
+            }
+        } else {
+            setSortBy("newest"); // Default sort
+        }
+    }, [sorts]);
+
+    // Fetch properties based on filters from URL
+    useEffect(() => {
+        // Fetch Properties
+        const fetchProperties = async () => {
+            setIsLoading(true);
+            try {
+                // Convert filters from URL to API format
+                const apiFilters = filters.map(filter => {
+                    let apiValue = filter.value;
+
+                    // Convert price/area IDs to min-max values for API
+                    if (filter.key === 'price' && filter.operator === 'rng' && filter.value) {
+                        const priceMinMax = getPriceRangeValue(filter.value);
+                        if (priceMinMax) {
+                            apiValue = priceMinMax;
+                        }
+                    } else if (filter.key === 'area' && filter.operator === 'rng' && filter.value) {
+                        const areaMinMax = getAreaRangeValue(filter.value);
+                        if (areaMinMax) {
+                            apiValue = areaMinMax;
+                        }
+                    } else if (filter.key === 'addressDistrict' && filter.operator === 'eq' && filter.value) {
+                        // Convert district ID to name for API
+                        const districtName = getDistrictNameById(filter.value);
+                        if (districtName) {
+                            apiValue = districtName;
+                        }
+                    }
+
+                    return {
+                        key: filter.key,
+                        operator: filter.operator === 'eq' ? 'equal' :
+                            filter.operator === 'gt' ? 'greater' :
+                                filter.operator === 'lt' ? 'less' :
+                                    filter.operator === 'gte' ? 'greater_equal' :
+                                        filter.operator === 'lte' ? 'less_equal' :
+                                            filter.operator === 'lk' ? 'like' :
+                                                filter.operator === 'rng' ? 'range' : 'equal',
+                        value: apiValue
+                    };
+                });
+
+                // Build API sorts from URL sorts
+                const apiSorts = sorts.map(sort => ({
+                    key: sort.key,
+                    type: sort.type
+                }));
+
+                // Call API to get properties with page from URL
+                const response = await searchProperties({
+                    filters: apiFilters,
+                    sorts: apiSorts,
+                    rpp: 2,
+                    page: page, // Use page from URL
+                });
+
+                // Map PropertyListing to Property format
+                const mappedProperties: Property[] = response.data.items.map((listing: PropertyListing) => {
+                    // Build full address
+                    const addressParts = [
+                        listing.addressStreet,
+                        listing.addressWard,
+                        listing.addressDistrict,
+                        listing.addressCity,
+                    ].filter(Boolean);
+                    const fullAddress = addressParts.join(", ");
+
+                    return {
+                        id: listing.id.toString(),
+                        title: listing.title,
+                        price: listing.price,
+                        area: listing.area,
+                        address: fullAddress,
+                        imageUrl: listing.imageUrls.length > 0 ? listing.imageUrls[0] : "https://via.placeholder.com/400x300",
+                        createdAt: listing.createdAt,
+                    };
+                });
+
+                setProperties(mappedProperties);
+                setTotalPages(response.data.pages || 1);
+            } catch (error) {
+                console.error("Error fetching properties:", error);
+                toast.error("Không thể tải danh sách tin đăng");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProperties();
+    }, [filters, sorts, page]);
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -242,9 +330,9 @@ export default function PropertyManagement() {
                         {!isLoading && properties.length > 0 && (
                             <div className="mt-6">
                                 <ControlledPagination
-                                    currentPage={currentPage}
+                                    currentPage={page}
                                     totalPages={totalPages}
-                                    onPageChange={setCurrentPage}
+                                    onPageChange={setPage}
                                 />
                             </div>
                         )}
@@ -257,7 +345,7 @@ export default function PropertyManagement() {
                 open={filterDialogOpen}
                 onOpenChange={setFilterDialogOpen}
                 onApplyFilter={handleApplyFilter}
-                initialFilters={filters}
+                initialFilters={getInitialFiltersForDialog()}
             />
         </div>
     );

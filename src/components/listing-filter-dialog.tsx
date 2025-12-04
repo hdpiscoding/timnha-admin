@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PROPERTY_TYPES } from "@/constants/propertyTypes";
 import { DISTRICTS } from "@/constants/districts";
+import { PRICE_RANGES } from "@/constants/priceRanges";
+import { AREA_RANGES } from "@/constants/areaRanges";
 import type { PropertyType } from "@/types/property-type";
 import type { District } from "@/types/district";
 
@@ -33,8 +35,8 @@ export interface FilterValues {
     approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED" | null;
     title: string | null;
     listingType: "for_sale" | "for_rent" | null;
-    price: number | null;
-    area: number | null;
+    price: string | null; // Changed to string (range ID)
+    area: string | null; // Changed to string (range ID)
     propertyType: PropertyType | null;
     numBedrooms: number | null;
     numBathrooms: number | null;
@@ -67,8 +69,7 @@ export function ListingFilterDialog({
         if (open) {
             setFilters(initialFilters);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open]);
+    }, [open, initialFilters]);
 
     const handleApply = () => {
         onApplyFilter(filters);
@@ -112,14 +113,20 @@ export function ListingFilterDialog({
         }
     };
 
-    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.trim();
-        setFilters({ ...filters, price: value ? Number(value) : null });
+    const handlePriceChange = (value: string) => {
+        if (value === "all") {
+            setFilters({ ...filters, price: null });
+        } else {
+            setFilters({ ...filters, price: value });
+        }
     };
 
-    const handleAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.trim();
-        setFilters({ ...filters, area: value ? Number(value) : null });
+    const handleAreaChange = (value: string) => {
+        if (value === "all") {
+            setFilters({ ...filters, area: null });
+        } else {
+            setFilters({ ...filters, area: value });
+        }
     };
 
     const handleDistrictChange = (value: string) => {
@@ -241,35 +248,52 @@ export function ListingFilterDialog({
                         />
                     </div>
 
-                    {/* Row 2: Price and Area */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Price */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="price">Giá (VNĐ)</Label>
-                            <Input
+                    {/* Price */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="price">Khoảng giá</Label>
+                        <Select
+                            value={filters.price || "all"}
+                            onValueChange={handlePriceChange}
+                        >
+                            <SelectTrigger
                                 id="price"
-                                type="number"
-                                placeholder="Nhập giá..."
-                                value={filters.price || ""}
-                                onChange={handlePriceChange}
-                                className="focus-visible:ring-[#008DDA]"
-                                min="0"
-                            />
-                        </div>
+                                className="focus:ring-[#008DDA] focus:ring-2 focus:ring-offset-0 cursor-pointer w-full"
+                            >
+                                <SelectValue placeholder="Chọn khoảng giá" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tất cả</SelectItem>
+                                {PRICE_RANGES.map((range) => (
+                                    <SelectItem key={range.id} value={range.id}>
+                                        {range.title}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                        {/* Area */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="area">Diện tích (m²)</Label>
-                            <Input
+                    {/* Area */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="area">Diện tích</Label>
+                        <Select
+                            value={filters.area || "all"}
+                            onValueChange={handleAreaChange}
+                        >
+                            <SelectTrigger
                                 id="area"
-                                type="number"
-                                placeholder="Nhập diện tích..."
-                                value={filters.area || ""}
-                                onChange={handleAreaChange}
-                                className="focus-visible:ring-[#008DDA]"
-                                min="0"
-                            />
-                        </div>
+                                className="focus:ring-[#008DDA] focus:ring-2 focus:ring-offset-0 cursor-pointer w-full"
+                            >
+                                <SelectValue placeholder="Chọn diện tích" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tất cả</SelectItem>
+                                {AREA_RANGES.map((range) => (
+                                    <SelectItem key={range.id} value={range.id}>
+                                        {range.title}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* District */}

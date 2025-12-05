@@ -37,7 +37,7 @@ export default function Login() {
             if (response.status === "200") {
                 loginData(response.data.token);
                 toast.success("Đăng nhập thành công!");
-                navigate("/");
+                navigate("/bang-dieu-khien");
             }
         } catch (error) {
             toast.error("Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.");

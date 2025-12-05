@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { UserListItem } from "@/components/user-list-item";
 import { PropertyListItem } from "@/components/property-list-item";
 import { ControlledPagination } from "@/components/ui/controlled-pagination";
-import { Button } from "@/components/ui/button";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -13,8 +12,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, X } from "lucide-react";
 import { toast } from "react-toastify";
+import { searchUsers, approveSellerRequest } from "@/services/userServices";
+import { searchProperties, approveListingRequest } from "@/services/propertyServices";
+import type { PropertyListing } from "@/types/property-listing";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RejectReasonDialog } from "@/components/reject-reason-dialog";
+import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 // Types
 interface PendingUser {
@@ -36,6 +41,9 @@ interface PendingProperty {
 }
 
 export default function Dashboard() {
+    // Initial Loading State (for first page load)
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+
     // Pending Users State
     const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
     const [usersCurrentPage, setUsersCurrentPage] = useState(1);
@@ -50,45 +58,42 @@ export default function Dashboard() {
 
     // Alert Dialog State
     const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+    const [alertDialogLoading, setAlertDialogLoading] = useState(false);
     const [alertDialogConfig, setAlertDialogConfig] = useState<{
         title: string;
         description: string;
-        onConfirm: () => void;
+        onConfirm: () => Promise<void>;
     } | null>(null);
 
+    // Reject Reason Dialog State (for user rejection)
+    const [rejectReasonDialogOpen, setRejectReasonDialogOpen] = useState(false);
+    const [pendingUserIdForReject, setPendingUserIdForReject] = useState<string | null>(null);
+
     // Fetch Pending Users
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchPendingUsers = async (_page: number) => {
+    const fetchPendingUsers = async (page: number) => {
         setIsLoadingUsers(true);
         try {
-            // TODO: Call API to get pending users
-            // const response = await getPendingUsers(_page);
+            // Call API to get pending users
+            const response = await searchUsers({
+                filters: [
+                    {
+                        key: "becomeSellerApproveStatus",
+                        operator: "equal",
+                        value: "PENDING"
+                    }
+                ],
+                sorts: [
+                    {
+                        key: "createAt",
+                        type: "DESC"
+                    }
+                ],
+                rpp: 5,
+                page: page
+            });
 
-            // Mock data
-            const mockUsers: PendingUser[] = [
-                {
-                    id: "1",
-                    fullName: "Nguyễn Văn A",
-                    email: "nguyenvana@example.com",
-                    phoneNumber: "0901234567",
-                },
-                {
-                    id: "2",
-                    avatarUrl: "https://via.placeholder.com/150",
-                    fullName: "Trần Thị B",
-                    email: "tranthib@example.com",
-                    phoneNumber: "0912345678",
-                },
-                {
-                    id: "3",
-                    fullName: "Lê Văn C",
-                    email: "levanc@example.com",
-                    phoneNumber: "0923456789",
-                },
-            ];
-
-            setPendingUsers(mockUsers);
-            setUsersTotalPages(3); // Mock total pages
+            setPendingUsers(response.data.items);
+            setUsersTotalPages(response.data.pages || 1);
         } catch (error) {
             console.error("Error fetching pending users:", error);
             toast.error("Không thể tải danh sách người bán chờ duyệt");
@@ -98,37 +103,52 @@ export default function Dashboard() {
     };
 
     // Fetch Pending Properties
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchPendingProperties = async (_page: number) => {
+    const fetchPendingProperties = async (page: number) => {
         setIsLoadingProperties(true);
         try {
-            // TODO: Call API to get pending properties
-            // const response = await getPendingProperties(_page);
+            // Call API to get pending properties
+            const response = await searchProperties({
+                filters: [
+                    {
+                        key: "approvalStatus",
+                        operator: "equal",
+                        value: "PENDING"
+                    }
+                ],
+                sorts: [
+                    {
+                        key: "createdAt",
+                        type: "DESC"
+                    }
+                ],
+                rpp: 5,
+                page: page
+            });
 
-            // Mock data
-            const mockProperties: PendingProperty[] = [
-                {
-                    id: "1",
-                    title: "Bán nhà mặt tiền đường Lê Văn Việt, Quận 9",
-                    price: 5000000000,
-                    area: 80,
-                    address: "Đường Lê Văn Việt, Quận 9, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-15T10:30:00Z",
-                },
-                {
-                    id: "2",
-                    title: "Cho thuê căn hộ cao cấp Vinhomes Central Park",
-                    price: 15000000,
-                    area: 70,
-                    address: "Vinhomes Central Park, Bình Thạnh, TP. Hồ Chí Minh",
-                    imageUrl: "https://via.placeholder.com/400x300",
-                    createdAt: "2024-01-14T15:20:00Z",
-                },
-            ];
+            // Map PropertyListing to PendingProperty format
+            const mappedProperties: PendingProperty[] = response.data.items.map((listing: PropertyListing) => {
+                // Build full address
+                const addressParts = [
+                    listing.addressStreet,
+                    listing.addressWard,
+                    listing.addressDistrict,
+                    listing.addressCity,
+                ].filter(Boolean);
+                const fullAddress = addressParts.join(", ");
 
-            setPendingProperties(mockProperties);
-            setPropertiesTotalPages(2); // Mock total pages
+                return {
+                    id: listing.id.toString(),
+                    title: listing.title,
+                    price: listing.price,
+                    area: listing.area,
+                    address: fullAddress,
+                    imageUrl: listing.imageUrls.length > 0 ? listing.imageUrls[0] : "https://via.placeholder.com/400x300",
+                    createdAt: listing.createdAt,
+                };
+            });
+
+            setPendingProperties(mappedProperties);
+            setPropertiesTotalPages(response.data.pages || 1);
         } catch (error) {
             console.error("Error fetching pending properties:", error);
             toast.error("Không thể tải danh sách tin đăng chờ duyệt");
@@ -138,36 +158,49 @@ export default function Dashboard() {
     };
 
     // Handle Approve/Reject User
-    const handleUserApprovalClick = (_userId: string, isApproved: boolean) => {
-        setAlertDialogConfig({
-            title: isApproved ? "Xác nhận duyệt người bán" : "Xác nhận từ chối",
-            description: isApproved
-                ? "Bạn có chắc chắn muốn duyệt người bán này không?"
-                : "Bạn có chắc chắn muốn từ chối yêu cầu này không?",
-            onConfirm: async () => {
-                try {
-                    // TODO: Call API to approve/reject user
-                    // await approveUser(_userId, isApproved);
+    const handleUserApprovalClick = (userId: string, isApproved: boolean) => {
+        if (isApproved) {
+            // For approval, show simple confirm dialog
+            setAlertDialogConfig({
+                title: "Xác nhận duyệt người bán",
+                description: "Bạn có chắc chắn muốn duyệt người bán này không?",
+                onConfirm: async () => {
+                    try {
+                        await approveSellerRequest("APPROVED", "", parseInt(userId));
+                        toast.success("Đã duyệt người bán thành công");
+                        fetchPendingUsers(usersCurrentPage);
+                    } catch (error) {
+                        console.error("Error approving user:", error);
+                        toast.error("Có lỗi xảy ra, vui lòng thử lại");
+                    }
+                },
+            });
+            setAlertDialogOpen(true);
+        } else {
+            // For rejection, show reject reason dialog
+            setPendingUserIdForReject(userId);
+            setRejectReasonDialogOpen(true);
+        }
+    };
 
-                    toast.success(
-                        isApproved
-                            ? "Đã duyệt người bán thành công"
-                            : "Đã từ chối yêu cầu"
-                    );
+    // Handle User Rejection with Reason
+    const handleUserReject = async (reason: string) => {
+        if (!pendingUserIdForReject) return;
 
-                    // Refresh list
-                    fetchPendingUsers(usersCurrentPage);
-                } catch (error) {
-                    console.error("Error approving user:", error);
-                    toast.error("Có lỗi xảy ra, vui lòng thử lại");
-                }
-            },
-        });
-        setAlertDialogOpen(true);
+        try {
+            await approveSellerRequest("REJECTED", reason, parseInt(pendingUserIdForReject));
+            toast.success("Đã từ chối yêu cầu");
+            fetchPendingUsers(usersCurrentPage);
+        } catch (error) {
+            console.error("Error rejecting user:", error);
+            toast.error("Có lỗi xảy ra, vui lòng thử lại");
+        } finally {
+            setPendingUserIdForReject(null);
+        }
     };
 
     // Handle Approve/Reject Property
-    const handlePropertyApprovalClick = (_propertyId: string, isApproved: boolean) => {
+    const handlePropertyApprovalClick = (propertyId: string, isApproved: boolean) => {
         setAlertDialogConfig({
             title: isApproved ? "Xác nhận duyệt tin đăng" : "Xác nhận từ chối",
             description: isApproved
@@ -175,8 +208,9 @@ export default function Dashboard() {
                 : "Bạn có chắc chắn muốn từ chối tin đăng này không?",
             onConfirm: async () => {
                 try {
-                    // TODO: Call API to approve/reject property
-                    // await approveProperty(_propertyId, isApproved);
+                    // Call API to approve/reject property
+                    const status = isApproved ? "APPROVED" : "REJECTED";
+                    await approveListingRequest(status, parseInt(propertyId));
 
                     toast.success(
                         isApproved
@@ -204,8 +238,25 @@ export default function Dashboard() {
         fetchPendingProperties(propertiesCurrentPage);
     }, [propertiesCurrentPage]);
 
+    // Turn off initial loading when both sections have loaded
+    useEffect(() => {
+        if (!isLoadingUsers && !isLoadingProperties && isInitialLoading) {
+            setIsInitialLoading(false);
+        }
+    }, [isLoadingUsers, isLoadingProperties, isInitialLoading]);
+
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-gray-50 p-6 relative">
+            {/* Initial Loading Overlay */}
+            {isInitialLoading && (
+                <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Spinner className="w-12 h-12 text-[#008DDA]" />
+                        <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
@@ -226,8 +277,29 @@ export default function Dashboard() {
 
                     <div className="p-6">
                         {isLoadingUsers ? (
-                            <div className="text-center py-8 text-gray-500">
-                                Đang tải dữ liệu...
+                            <div className="space-y-4">
+                                {/* Show 3 skeleton items while loading */}
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex gap-4 p-4 border border-gray-200 rounded-lg">
+                                        {/* Avatar skeleton */}
+                                        <Skeleton className="w-16 h-16 rounded-full flex-shrink-0" />
+
+                                        {/* Content skeleton */}
+                                        <div className="flex-1 space-y-2">
+                                            {/* Name */}
+                                            <Skeleton className="h-5 w-48" />
+
+                                            {/* Phone */}
+                                            <Skeleton className="h-4 w-40" />
+                                        </div>
+
+                                        {/* Action buttons skeleton */}
+                                        <div className="flex gap-2 flex-shrink-0">
+                                            <Skeleton className="w-20 h-8 rounded-md" />
+                                            <Skeleton className="w-20 h-8 rounded-md" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : pendingUsers.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
@@ -236,33 +308,13 @@ export default function Dashboard() {
                         ) : (
                             <div className="space-y-4">
                                 {pendingUsers.map((user) => (
-                                    <div
+                                    <UserListItem
                                         key={user.id}
-                                        className="flex items-center gap-4"
-                                    >
-                                        <div className="flex-1">
-                                            <UserListItem {...user} />
-                                        </div>
-                                        <div className="flex gap-2 flex-shrink-0">
-                                            <Button
-                                                onClick={() => handleUserApprovalClick(user.id, true)}
-                                                className="bg-green-600 hover:bg-green-700 cursor-pointer"
-                                                size="sm"
-                                            >
-                                                <Check className="w-4 h-4 mr-1" />
-                                                Duyệt
-                                            </Button>
-                                            <Button
-                                                onClick={() => handleUserApprovalClick(user.id, false)}
-                                                className="cursor-pointer hover:bg-red-700"
-                                                variant="destructive"
-                                                size="sm"
-                                            >
-                                                <X className="w-4 h-4 mr-1" />
-                                                Từ chối
-                                            </Button>
-                                        </div>
-                                    </div>
+                                        {...user}
+                                        becomeSellerApproveStatus = "PENDING"
+                                        onApprove={(id) => handleUserApprovalClick(id, true)}
+                                        onReject={(id) => handleUserApprovalClick(id, false)}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -292,8 +344,38 @@ export default function Dashboard() {
 
                     <div className="p-6">
                         {isLoadingProperties ? (
-                            <div className="text-center py-8 text-gray-500">
-                                Đang tải dữ liệu...
+                            <div className="space-y-4">
+                                {/* Show 3 skeleton items while loading */}
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex gap-4 p-3 border border-gray-200 rounded-lg">
+                                        {/* Image skeleton */}
+                                        <Skeleton className="w-48 h-36 rounded-lg flex-shrink-0" />
+
+                                        {/* Content skeleton */}
+                                        <div className="flex-1 space-y-3">
+                                            {/* Title */}
+                                            <Skeleton className="h-6 w-3/4" />
+
+                                            {/* Address */}
+                                            <Skeleton className="h-4 w-2/3" />
+
+                                            {/* Area */}
+                                            <Skeleton className="h-4 w-32" />
+
+                                            {/* Price */}
+                                            <Skeleton className="h-6 w-40" />
+
+                                            {/* Date */}
+                                            <Skeleton className="h-3 w-36" />
+                                        </div>
+
+                                        {/* Action buttons skeleton */}
+                                        <div className="flex gap-2 flex-shrink-0 items-center">
+                                            <Skeleton className="w-20 h-8 rounded-md" />
+                                            <Skeleton className="w-20 h-8 rounded-md" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : pendingProperties.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
@@ -302,33 +384,13 @@ export default function Dashboard() {
                         ) : (
                             <div className="space-y-4">
                                 {pendingProperties.map((property) => (
-                                    <div
+                                    <PropertyListItem
                                         key={property.id}
-                                        className="flex items-center gap-4"
-                                    >
-                                        <div className="flex-1">
-                                            <PropertyListItem {...property} />
-                                        </div>
-                                        <div className="flex gap-2 flex-shrink-0">
-                                            <Button
-                                                onClick={() => handlePropertyApprovalClick(property.id, true)}
-                                                className="bg-green-600 hover:bg-green-700 cursor-pointer"
-                                                size="sm"
-                                            >
-                                                <Check className="w-4 h-4 mr-1" />
-                                                Duyệt
-                                            </Button>
-                                            <Button
-                                                onClick={() => handlePropertyApprovalClick(property.id, false)}
-                                                className="cursor-pointer hover:bg-red-700"
-                                                variant="destructive"
-                                                size="sm"
-                                            >
-                                                <X className="w-4 h-4 mr-1" />
-                                                Từ chối
-                                            </Button>
-                                        </div>
-                                    </div>
+                                        {...property}
+                                        approvalStatus="PENDING"
+                                        onApprove={(id) => handlePropertyApprovalClick(id, true)}
+                                        onReject={(id) => handlePropertyApprovalClick(id, false)}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -356,21 +418,42 @@ export default function Dashboard() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="cursor-pointer" onClick={() => setAlertDialogOpen(false)}>
+                        <AlertDialogCancel
+                            className="cursor-pointer"
+                            onClick={() => setAlertDialogOpen(false)}
+                            disabled={alertDialogLoading}
+                        >
                             Hủy
                         </AlertDialogCancel>
                         <AlertDialogAction
                             className="cursor-pointer"
-                            onClick={() => {
-                                alertDialogConfig?.onConfirm();
-                                setAlertDialogOpen(false);
+                            disabled={alertDialogLoading}
+                            onClick={async () => {
+                                if (!alertDialogConfig?.onConfirm) return;
+                                setAlertDialogLoading(true);
+                                try {
+                                    await alertDialogConfig.onConfirm();
+                                    setAlertDialogOpen(false);
+                                } finally {
+                                    setAlertDialogLoading(false);
+                                }
                             }}
                         >
-                            Xác nhận
+                            {alertDialogLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {alertDialogLoading ? "Đang xử lý..." : "Xác nhận"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Reject Reason Dialog for Users */}
+            <RejectReasonDialog
+                open={rejectReasonDialogOpen}
+                onOpenChange={setRejectReasonDialogOpen}
+                onConfirm={handleUserReject}
+                title="Xác nhận từ chối người bán"
+                description="Vui lòng nhập lý do từ chối (không bắt buộc)"
+            />
         </div>
     );
 }

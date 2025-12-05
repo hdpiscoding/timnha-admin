@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { UserListItem } from "@/components/user-list-item";
 import { ControlledPagination } from "@/components/ui/controlled-pagination";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
     Select,
     SelectContent,
@@ -9,8 +10,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { UserFilterDialog, type FilterValues } from "@/components/user-filter-dialog";
 import { Filter } from "lucide-react";
 import { toast } from "react-toastify";
+import { useSearchQuery } from "@/hooks/use-search-query";
+import { searchUsers } from "@/services/userServices";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Types
 interface User {
@@ -26,62 +31,67 @@ type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
 
 export default function UserManagement() {
     const [users, setUsers] = useState<User[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [totalUsers, setTotalUsers] = useState(0);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
 
+    // Use search query hook for URL sync
+    const { filters, sorts, page, setMultipleFilters, setSingleSort, setPage } = useSearchQuery();
+
+    // Filter Dialog State
+    const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+
+    // Build initial filters from URL filters for dialog
+    const getInitialFiltersForDialog = (): FilterValues => {
+        // Find filters from URL - hook returns raw values
+        const fullNameFilter = filters.find(f => f.key === 'fullName' && f.operator === 'lk');
+        const phoneNumberFilter = filters.find(f => f.key === 'phoneNumber' && f.operator === 'eq');
+        const becomeSellerApproveStatusFilter = filters.find(f => f.key === 'becomeSellerApproveStatus' && f.operator === 'eq');
+
+        return {
+            fullName: fullNameFilter ? fullNameFilter.value : null,
+            phoneNumber: phoneNumberFilter ? phoneNumberFilter.value : null,
+            becomeSellerApproveStatus: becomeSellerApproveStatusFilter
+                ? { id: becomeSellerApproveStatusFilter.value, name: becomeSellerApproveStatusFilter.value }
+                : null,
+        };
+    };
+
     // Fetch Users
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchUsers = async (_page: number, _sort: SortOption) => {
+    const fetchUsers = async () => {
         setIsLoading(true);
         try {
-            // TODO: Call API to get users
-            // const response = await getUsers(_page, _sort);
+            // Convert filters from URL to API format
+            const apiFilters = filters.map(filter => ({
+                key: filter.key,
+                operator: filter.operator === 'eq' ? 'equal' :
+                          filter.operator === 'gt' ? 'greater' :
+                          filter.operator === 'lt' ? 'less' :
+                          filter.operator === 'gte' ? 'greater_equal' :
+                          filter.operator === 'lte' ? 'less_equal' :
+                          filter.operator === 'lk' ? 'like' :
+                          filter.operator === 'rng' ? 'range' : 'equal',
+                value: filter.value
+            }));
 
-            // Mock data
-            const mockUsers: User[] = [
-                {
-                    id: "1",
-                    fullName: "Nguyễn Văn A",
-                    email: "nguyenvana@example.com",
-                    phoneNumber: "0901234567",
-                    createdAt: "2024-01-15T10:30:00Z",
-                },
-                {
-                    id: "2",
-                    avatarUrl: "https://via.placeholder.com/150",
-                    fullName: "Trần Thị B",
-                    email: "tranthib@example.com",
-                    phoneNumber: "0912345678",
-                    createdAt: "2024-01-14T15:20:00Z",
-                },
-                {
-                    id: "3",
-                    fullName: "Lê Văn C",
-                    email: "levanc@example.com",
-                    phoneNumber: "0923456789",
-                    createdAt: "2024-01-13T09:15:00Z",
-                },
-                {
-                    id: "4",
-                    avatarUrl: "https://via.placeholder.com/150",
-                    fullName: "Phạm Thị D",
-                    email: "phamthid@example.com",
-                    phoneNumber: "0934567890",
-                    createdAt: "2024-01-12T14:45:00Z",
-                },
-                {
-                    id: "5",
-                    fullName: "Hoàng Văn E",
-                    email: "hoangvane@example.com",
-                    phoneNumber: "0945678901",
-                    createdAt: "2024-01-11T11:20:00Z",
-                },
-            ];
+            // Build API sorts from URL sorts
+            const apiSorts = sorts.map(sort => ({
+                key: sort.key,
+                type: sort.type
+            }));
 
-            setUsers(mockUsers);
-            setTotalPages(3); // Mock total pages
+            // Call API to get users with page from URL
+            const response = await searchUsers({
+                filters: apiFilters,
+                sorts: apiSorts,
+                rpp: 2,
+                page: page,
+            });
+
+            setUsers(response.data.items);
+            setTotalUsers(response.data.records || 0);
+            setTotalPages(response.data.pages || 1);
         } catch (error) {
             console.error("Error fetching users:", error);
             toast.error("Không thể tải danh sách người dùng");
@@ -93,19 +103,75 @@ export default function UserManagement() {
     // Handle Sort Change
     const handleSortChange = (value: SortOption) => {
         setSortBy(value);
-        setCurrentPage(1); // Reset to first page when sorting changes
+
+        // Use setSingleSort from hook to clear all sorts and set new one atomically (with page reset)
+        switch (value) {
+            case "newest":
+                setSingleSort("createAt", "DESC", true);
+                break;
+            case "oldest":
+                setSingleSort("createAt", "ASC", true);
+                break;
+            case "name-asc":
+                setSingleSort("fullName", "ASC", true);
+                break;
+            case "name-desc":
+                setSingleSort("fullName", "DESC", true);
+                break;
+        }
+    };
+
+    // Count active filters
+    const getActiveFiltersCount = () => {
+        return filters.length;
     };
 
     // Handle Filter Click
     const handleFilterClick = () => {
-        // TODO: Implement filter modal or drawer
-        toast.info("Chức năng lọc đang được phát triển");
+        setFilterDialogOpen(true);
     };
+
+    // Handle Apply Filter
+    const handleApplyFilter = (newFilters: FilterValues) => {
+        // Update URL with new filters
+        setMultipleFilters([
+            { key: "fullName", operator: "lk", value: newFilters.fullName || "" },
+            { key: "phoneNumber", operator: "lk", value: newFilters.phoneNumber || "" },
+            { key: "becomeSellerApproveStatus", operator: "eq", value: newFilters.becomeSellerApproveStatus?.id || "" },
+        ], true); // Reset page to 1 atomically
+        toast.success("Đã áp dụng bộ lọc");
+    };
+
+    // Sync sortBy state with URL sorts
+    useEffect(() => {
+        if (sorts.length > 0) {
+            const sort = sorts[0]; // Take first sort
+            const sortKey = `${sort.key}-${sort.type.toLowerCase()}`;
+
+            switch (sortKey) {
+                case "createdAt-desc":
+                    setSortBy("newest");
+                    break;
+                case "createdAt-asc":
+                    setSortBy("oldest");
+                    break;
+                case "fullName-asc":
+                    setSortBy("name-asc");
+                    break;
+                case "fullName-desc":
+                    setSortBy("name-desc");
+                    break;
+            }
+        } else {
+            setSortBy("newest"); // Default sort
+        }
+    }, [sorts]);
 
     // Effects
     useEffect(() => {
-        fetchUsers(currentPage, sortBy);
-    }, [currentPage, sortBy]);
+        fetchUsers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters, sorts, page]);
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -114,7 +180,7 @@ export default function UserManagement() {
                 <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
                     <h1 className="text-3xl font-bold text-gray-900">Quản lý người dùng</h1>
                     <p className="text-gray-600 mt-2">
-                        Tổng cộng {users.length} người dùng
+                        Tổng cộng {totalUsers} người dùng
                     </p>
                 </div>
 
@@ -122,14 +188,24 @@ export default function UserManagement() {
                 <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
                     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                         {/* Filter Button */}
-                        <Button
-                            onClick={handleFilterClick}
-                            variant="outline"
-                            className="flex items-center gap-2 cursor-pointer"
-                        >
-                            <Filter className="w-4 h-4" />
-                            Lọc
-                        </Button>
+                        <div className="relative">
+                            <Button
+                                onClick={handleFilterClick}
+                                variant="outline"
+                                className="flex items-center gap-2 cursor-pointer"
+                            >
+                                <Filter className="w-4 h-4" />
+                                Lọc
+                            </Button>
+                            {getActiveFiltersCount() > 0 && (
+                                <Badge
+                                    variant="default"
+                                    className="absolute -top-2 -right-2 h-5 min-w-5 px-1 bg-[#008DDA] hover:bg-[#008DDA]"
+                                >
+                                    {getActiveFiltersCount()}
+                                </Badge>
+                            )}
+                        </div>
 
                         {/* Sort Select */}
                         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -155,8 +231,29 @@ export default function UserManagement() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="p-6">
                         {isLoading ? (
-                            <div className="text-center py-12 text-gray-500">
-                                Đang tải dữ liệu...
+                            <div className="space-y-4">
+                                {/* Show 3 skeleton items while loading */}
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex gap-4 p-4 border border-gray-200 rounded-lg">
+                                        {/* Avatar skeleton */}
+                                        <Skeleton className="w-16 h-16 rounded-full flex-shrink-0" />
+
+                                        {/* Content skeleton */}
+                                        <div className="flex-1 space-y-2">
+                                            {/* Name */}
+                                            <Skeleton className="h-5 w-48" />
+
+                                            {/* Email */}
+                                            <Skeleton className="h-4 w-64" />
+
+                                            {/* Phone */}
+                                            <Skeleton className="h-4 w-40" />
+                                        </div>
+
+                                        {/* Action button skeleton */}
+                                        <Skeleton className="w-24 h-10 rounded-md flex-shrink-0" />
+                                    </div>
+                                ))}
                             </div>
                         ) : users.length === 0 ? (
                             <div className="text-center py-12 text-gray-500">
@@ -176,15 +273,23 @@ export default function UserManagement() {
                         {!isLoading && users.length > 0 && (
                             <div className="mt-6">
                                 <ControlledPagination
-                                    currentPage={currentPage}
+                                    currentPage={page}
                                     totalPages={totalPages}
-                                    onPageChange={setCurrentPage}
+                                    onPageChange={setPage}
                                 />
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Filter Dialog */}
+            <UserFilterDialog
+                open={filterDialogOpen}
+                onOpenChange={setFilterDialogOpen}
+                onApplyFilter={handleApplyFilter}
+                initialFilters={getInitialFiltersForDialog()}
+            />
         </div>
     );
 }

@@ -115,7 +115,7 @@ export const AdminSidebar: React.FC = () => {
         {
             icon: <Home size={20} />,
             label: 'Trang chủ',
-            path: '/',
+            path: '/bang-dieu-khien',
         },
         {
             icon: <FileText size={20} />,
@@ -141,7 +141,7 @@ export const AdminSidebar: React.FC = () => {
                 {/* Logo */}
                 <div className="p-6 border-b border-gray-200 bg-gradient-to-br from-white to-gray-50">
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/bang-dieu-khien')}
                         className="flex flex-col items-center justify-center w-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#008DDA] focus:ring-offset-2 rounded-lg p-2 cursor-pointer"
                     >
                         <img

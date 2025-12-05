@@ -35,8 +35,8 @@ export interface FilterValues {
     approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED" | null;
     title: string | null;
     listingType: "for_sale" | "for_rent" | null;
-    price: string | null; // Changed to string (range ID)
-    area: string | null; // Changed to string (range ID)
+    price: string | null;
+    area: string | null;
     propertyType: PropertyType | null;
     numBedrooms: number | null;
     numBathrooms: number | null;

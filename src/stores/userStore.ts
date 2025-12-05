@@ -9,6 +9,7 @@ interface UserState {
     logout: () => void;
     setUserInfo: (userId: number | null, avatarUrl: string | null) => void;
     clearUserInfo: () => void;
+    clearToken: () => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -38,6 +39,11 @@ export const useUserStore = create<UserState>()(
             clearUserInfo: () =>
                 set({
                     userId: null,
+                }),
+
+            clearToken: () =>
+                set({
+                    token: null,
                 }),
         }),
         {

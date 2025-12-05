@@ -13,6 +13,7 @@ import {
 import { ListingFilterDialog, type FilterValues } from "@/components/listing-filter-dialog";
 import { Filter } from "lucide-react";
 import { toast } from "react-toastify";
+import { Skeleton } from "@/components/ui/skeleton";
 import { searchProperties } from "@/services/propertyServices";
 import type { PropertyListing } from "@/types/property-listing";
 import { useSearchQuery } from "@/hooks/use-search-query";
@@ -38,6 +39,7 @@ export default function PropertyManagement() {
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
+    const [totalListings, setTotalListings] = useState(0);
 
     // Use search query hook for URL sync
     const { filters, sorts, page, setMultipleFilters, setSingleSort, setPage } = useSearchQuery();
@@ -214,6 +216,8 @@ export default function PropertyManagement() {
                     page: page, // Use page from URL
                 });
 
+                setTotalListings(response.data.records || 0);
+
                 // Map PropertyListing to Property format
                 const mappedProperties: Property[] = response.data.items.map((listing: PropertyListing) => {
                     // Build full address
@@ -256,7 +260,7 @@ export default function PropertyManagement() {
                 <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
                     <h1 className="text-3xl font-bold text-gray-900">Quản lý tin đăng</h1>
                     <p className="text-gray-600 mt-2">
-                        Tổng cộng {properties.length} tin đăng
+                        Tổng cộng {totalListings} tin đăng
                     </p>
                 </div>
 
@@ -309,8 +313,32 @@ export default function PropertyManagement() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="p-6">
                         {isLoading ? (
-                            <div className="text-center py-12 text-gray-500">
-                                Đang tải dữ liệu...
+                            <div className="space-y-4">
+                                {/* Show 3 skeleton items while loading */}
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex gap-4 p-4 border border-gray-200 rounded-lg">
+                                        {/* Image skeleton */}
+                                        <Skeleton className="w-48 h-32 rounded-lg flex-shrink-0" />
+
+                                        {/* Content skeleton */}
+                                        <div className="flex-1 space-y-3">
+                                            {/* Title */}
+                                            <Skeleton className="h-6 w-3/4" />
+
+                                            {/* Price and Area */}
+                                            <div className="flex gap-4">
+                                                <Skeleton className="h-5 w-32" />
+                                                <Skeleton className="h-5 w-24" />
+                                            </div>
+
+                                            {/* Address */}
+                                            <Skeleton className="h-4 w-2/3" />
+
+                                            {/* Date */}
+                                            <Skeleton className="h-4 w-40" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : properties.length === 0 ? (
                             <div className="text-center py-12 text-gray-500">

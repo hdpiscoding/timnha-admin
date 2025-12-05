@@ -1,7 +1,8 @@
 export interface PreferencePreset {
-    id: string;
+    id: number;
     name: string;
     image: string;
+    createAt?: string;
     description: string;
     preferenceSafety: number;
     preferenceHealthcare: number;

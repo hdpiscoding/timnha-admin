@@ -22,6 +22,7 @@ import {
 import { Filter, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import type { PreferencePreset } from "@/types/preference-preset";
+import {useNavigate} from "react-router-dom";
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
 
@@ -31,6 +32,7 @@ export default function PreferencePresetManagement() {
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
+    const navigate = useNavigate();
 
     // Alert Dialog State
     const [alertDialogOpen, setAlertDialogOpen] = useState(false);
@@ -47,7 +49,7 @@ export default function PreferencePresetManagement() {
             // Mock data
             const mockPresets: PreferencePreset[] = [
                 {
-                    id: "1",
+                    id: 1,
                     name: "Gia đình trẻ",
                     description: "Phù hợp cho gia đình có con nhỏ, ưu tiên giáo dục, y tế và môi trường sống an toàn.",
                     image: "https://via.placeholder.com/300x200",
@@ -60,7 +62,7 @@ export default function PreferencePresetManagement() {
                     preferenceEntertainment: 60,
                 },
                 {
-                    id: "2",
+                    id: 2,
                     name: "Người đi làm",
                     description: "Dành cho người độc thân hoặc cặp đôi đi làm, ưu tiên giao thông, tiện ích và giải trí.",
                     image: "https://via.placeholder.com/300x200",
@@ -73,7 +75,7 @@ export default function PreferencePresetManagement() {
                     preferenceEntertainment: 80,
                 },
                 {
-                    id: "3",
+                    id: 3,
                     name: "Người cao tuổi",
                     description: "Phù hợp cho người cao tuổi, ưu tiên y tế, môi trường yên tĩnh và an ninh.",
                     image: "https://via.placeholder.com/300x200",
@@ -86,7 +88,7 @@ export default function PreferencePresetManagement() {
                     preferenceEntertainment: 50,
                 },
                 {
-                    id: "4",
+                    id: 4,
                     name: "Sinh viên",
                     description: "Dành cho sinh viên, ưu tiên giao thông, tiện ích mua sắm và giải trí.",
                     image: "https://via.placeholder.com/300x200",
@@ -99,7 +101,7 @@ export default function PreferencePresetManagement() {
                     preferenceEntertainment: 85,
                 },
                 {
-                    id: "5",
+                    id: 5,
                     name: "Doanh nhân",
                     description: "Phù hợp cho doanh nhân, ưu tiên an ninh, giao thông thuận tiện và tiện ích cao cấp.",
                     image: "https://via.placeholder.com/300x200",
@@ -138,14 +140,13 @@ export default function PreferencePresetManagement() {
     // Handle Add New Preset
     const handleAddNew = () => {
         // TODO: Navigate to create preset page or open modal
-        toast.info("Chức năng thêm mới đang được phát triển");
+        navigate("/bo-uu-tien/tao-moi", { replace: true });
     };
 
     // Handle Preset Click
-    const handlePresetClick = (presetId: string) => {
+    const handlePresetClick = (presetId: number) => {
         // TODO: Navigate to edit preset page or open detail modal
-        console.log("Clicked preset:", presetId);
-        toast.info("Chi tiết bộ ưu tiên đang được phát triển");
+        navigate(`/bo-uu-tien/${presetId}/chinh-sua`, { replace: true });
     };
 
     // Handle Delete Click - Open dialog

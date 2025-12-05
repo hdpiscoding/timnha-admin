@@ -120,17 +120,17 @@ export const AdminSidebar: React.FC = () => {
         {
             icon: <FileText size={20} />,
             label: 'Quản lý tin đăng',
-            path: '/quan-ly-tin-dang',
+            path: '/tin-dang',
         },
         {
             icon: <Users size={20} />,
             label: 'Quản lý người dùng',
-            path: '/quan-ly-nguoi-dung',
+            path: '/nguoi-dung',
         },
         {
             icon: <Settings size={20} />,
             label: 'Quản lý bộ ưu tiên',
-            path: '/quan-ly-bo-uu-tien',
+            path: '/bo-uu-tien',
         },
     ];
 

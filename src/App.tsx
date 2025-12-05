@@ -6,6 +6,8 @@ import PropertyManagement from "@/pages/PropertyManagement.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
 import PreferencePresetManagement from "@/pages/PreferencePresetManagement.tsx";
 import {PrivateRoute} from "@/components/private-route.tsx";
+import CreatePreferencePreset from "@/pages/CreatePreferencePreset.tsx";
+import EditPreferencePreset from "@/pages/EditPreferencePreset.tsx";
 
 function App() {
   return (
@@ -24,9 +26,11 @@ function App() {
                       }
                   >
                       <Route path="/bang-dieu-khien" element={<Dashboard />} />
-                      <Route path="/quan-ly-tin-dang" element={<PropertyManagement />} />
-                      <Route path="/quan-ly-nguoi-dung" element={<UserManagement />} />
-                      <Route path="/quan-ly-bo-uu-tien" element={<PreferencePresetManagement />} />
+                      <Route path="/tin-dang" element={<PropertyManagement />} />
+                      <Route path="/nguoi-dung" element={<UserManagement />} />
+                      <Route path="/bo-uu-tien" element={<PreferencePresetManagement />} />
+                      <Route path="/bo-uu-tien/tao-moi" element={<CreatePreferencePreset />} />
+                      <Route path="/bo-uu-tien/:id/chinh-sua" element={<EditPreferencePreset />} />
                   </Route>
               </Routes>
           </Router>

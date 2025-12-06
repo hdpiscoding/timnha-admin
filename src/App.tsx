@@ -8,6 +8,7 @@ import PreferencePresetManagement from "@/pages/PreferencePresetManagement.tsx";
 import {PrivateRoute} from "@/components/private-route.tsx";
 import CreatePreferencePreset from "@/pages/CreatePreferencePreset.tsx";
 import EditPreferencePreset from "@/pages/EditPreferencePreset.tsx";
+import UserDetail from "@/pages/UserDetail.tsx";
 import ScrollToTop from "@/components/scroll-to-top.tsx";
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
                       <Route path="/bang-dieu-khien" element={<Dashboard />} />
                       <Route path="/tin-dang" element={<PropertyManagement />} />
                       <Route path="/nguoi-dung" element={<UserManagement />} />
+                      <Route path="/nguoi-dung/:id" element={<UserDetail />} />
                       <Route path="/bo-uu-tien" element={<PreferencePresetManagement />} />
                       <Route path="/bo-uu-tien/tao-moi" element={<CreatePreferencePreset />} />
                       <Route path="/bo-uu-tien/:id/chinh-sua" element={<EditPreferencePreset />} />

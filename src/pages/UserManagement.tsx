@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { UserListItem } from "@/components/user-list-item";
 import { ControlledPagination } from "@/components/ui/controlled-pagination";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ interface User {
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
 
 export default function UserManagement() {
+    const navigate = useNavigate();
     const [users, setUsers] = useState<User[]>([]);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
@@ -265,6 +267,7 @@ export default function UserManagement() {
                                     <UserListItem
                                         key={user.id}
                                         {...user}
+                                        onClick={(id) => navigate(`/nguoi-dung/${id}`)}
                                     />
                                 ))}
                             </div>

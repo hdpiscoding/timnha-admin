@@ -30,3 +30,8 @@ export const searchUsers = async (query: {
     });
     return response.data;
 }
+
+export const getUserById = async (id: number) => {
+    const response = await instance.get(`user/${id}`);
+    return response.data;
+}

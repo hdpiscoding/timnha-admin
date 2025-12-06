@@ -14,9 +14,10 @@ import {
     FormMessage,
     FormDescription
 } from "@/components/ui/form";
-import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, X } from "lucide-react";
+import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
+import { createPreferencePreset } from "@/services/preferencePresetServices";
 
 // Define form values type
 interface FormValues {
@@ -95,6 +96,7 @@ const preferenceConfig: PreferenceItem[] = [
 export default function CreatePreferencePreset() {
     const navigate = useNavigate();
     const [imagePreview, setImagePreview] = useState<string>("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initialize React Hook Form
     const form = useForm<FormValues>({
@@ -150,32 +152,36 @@ export default function CreatePreferencePreset() {
 
     // Handle form submit
     const onSubmit = async (data: FormValues) => {
-        try {
-            // TODO: Call API to create preference preset
-            // const formData = new FormData();
-            // formData.append('name', data.name);
-            // formData.append('description', data.description);
-            // if (data.image) {
-            //     formData.append('image', data.image);
-            // }
-            // formData.append('preferenceSafety', data.preferenceSafety.toString());
-            // formData.append('preferenceHealthcare', data.preferenceHealthcare.toString());
-            // formData.append('preferenceEducation', data.preferenceEducation.toString());
-            // formData.append('preferenceShopping', data.preferenceShopping.toString());
-            // formData.append('preferenceTransportation', data.preferenceTransportation.toString());
-            // formData.append('preferenceEnvironment', data.preferenceEnvironment.toString());
-            // formData.append('preferenceEntertainment', data.preferenceEntertainment.toString());
-            // await createPreferencePreset(formData);
+        if (!imagePreview) {
+            toast.error("Vui lòng chọn ảnh đại diện");
+            return;
+        }
 
-            // Mock success
-            console.log("Form data:", data);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        setIsSubmitting(true);
+        try {
+            // Prepare create data - convert percentages to decimals (0-1 range)
+            const createData = {
+                name: data.name,
+                description: data.description,
+                image: "https://s1.media.ngoisao.vn/news/2021/11/07/jack-va-thien-an-5805-tile-ngoisaovn-w1080-h648.jpg",
+                preferenceSafety: data.preferenceSafety / 100,
+                preferenceHealthcare: data.preferenceHealthcare / 100,
+                preferenceEducation: data.preferenceEducation / 100,
+                preferenceShopping: data.preferenceShopping / 100,
+                preferenceTransportation: data.preferenceTransportation / 100,
+                preferenceEnvironment: data.preferenceEnvironment / 100,
+                preferenceEntertainment: data.preferenceEntertainment / 100,
+            };
+
+            await createPreferencePreset(createData);
 
             toast.success("Tạo bộ ưu tiên thành công!");
-            navigate("/preference-presets");
+            navigate("/bo-uu-tien");
         } catch (error) {
             console.error("Error creating preference preset:", error);
             toast.error("Có lỗi xảy ra khi tạo bộ ưu tiên");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -278,9 +284,9 @@ export default function CreatePreferencePreset() {
                                             Ảnh đại diện <span className="text-red-500">*</span>
                                         </FormLabel>
                                         <FormControl>
-                                            <div>
+                                            <div className="flex flex-col items-center">
                                                 {!imagePreview ? (
-                                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                                                    <div className="w-full max-w-sm aspect-square border-2 border-dashed border-gray-300 rounded-lg p-8 flex items-center justify-center hover:border-gray-400 transition-colors">
                                                         <input
                                                             id="image"
                                                             type="file"
@@ -291,7 +297,7 @@ export default function CreatePreferencePreset() {
                                                         />
                                                         <label
                                                             htmlFor="image"
-                                                            className="cursor-pointer flex flex-col items-center gap-3"
+                                                            className="cursor-pointer flex flex-col items-center gap-3 text-center"
                                                         >
                                                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                                                                 <Upload className="w-8 h-8 text-gray-400" />
@@ -307,21 +313,23 @@ export default function CreatePreferencePreset() {
                                                         </label>
                                                     </div>
                                                 ) : (
-                                                    <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                                                        <img
-                                                            src={imagePreview}
-                                                            alt="Preview"
-                                                            className="w-full h-64 object-cover"
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            onClick={handleRemoveImage}
-                                                            variant="destructive"
-                                                            size="icon-sm"
-                                                            className="absolute top-3 right-3"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
+                                                    <div className="w-full max-w-sm">
+                                                        <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                                                            <img
+                                                                src={imagePreview}
+                                                                alt="Preview"
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                            <Button
+                                                                type="button"
+                                                                onClick={handleRemoveImage}
+                                                                variant="destructive"
+                                                                size="icon-sm"
+                                                                className="absolute top-3 right-3"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -407,18 +415,25 @@ export default function CreatePreferencePreset() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => navigate(-1)}
-                                    disabled={form.formState.isSubmitting}
+                                    onClick={() => navigate("/bo-uu-tien")}
+                                    disabled={isSubmitting}
                                     className="min-w-[150px] cursor-pointer"
                                 >
                                     Hủy bỏ
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={form.formState.isSubmitting}
-                                    className="min-w-[150px] cursor-pointer"
+                                    disabled={isSubmitting}
+                                    className="min-w-[150px] cursor-pointer bg-[#008DDA] hover:bg-[#0077b6]"
                                 >
-                                    {form.formState.isSubmitting ? "Đang tạo..." : "Tạo bộ ưu tiên"}
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Đang tạo...
+                                        </>
+                                    ) : (
+                                        "Tạo bộ ưu tiên"
+                                    )}
                                 </Button>
                             </div>
                         </div>

@@ -14,10 +14,10 @@ import {
     FormMessage,
     FormDescription
 } from "@/components/ui/form";
-import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, X, Loader2 } from "lucide-react";
+import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
-import type {PreferencePreset} from "@/types/preference-preset";
+import { getPreferencePresetById, updatePreferencePreset } from "@/services/preferencePresetServices";
 
 // Define form values type
 interface FormValues {
@@ -97,9 +97,8 @@ export default function EditPreferencePreset() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [imagePreview, setImagePreview] = useState<string>("");
-    const [existingImageUrl, setExistingImageUrl] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
-    const [imageChanged, setImageChanged] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initialize React Hook Form
     const form = useForm<FormValues>({
@@ -123,54 +122,35 @@ export default function EditPreferencePreset() {
         const fetchPreferencePreset = async () => {
             if (!id) {
                 toast.error("ID không hợp lệ");
-                navigate("/preference-presets");
+                navigate("/bo-uu-tien");
                 return;
             }
 
             setIsLoading(true);
             try {
-                // TODO: Call API to get preference preset by ID
-                // const response = await getPreferencePresetById(id);
-                // const data: PreferencePresetData = response.data;
-
-                // Mock data
-                await new Promise(resolve => setTimeout(resolve, 500));
-                const data: PreferencePreset = {
-                    id: 11,
-                    name: "Tín đồ Thể thao & Cộng đồng",
-                    image: "🏃‍♂️",
-                    description: "Ưu tiên các tiện ích thể thao (gym, sân), công viên và các hoạt động văn hóa.",
-                    createAt: "2025-11-03T15:40:08.325218Z",
-                    preferenceSafety: 0.40,
-                    preferenceEducation: 0.20,
-                    preferenceShopping: 0.50,
-                    preferenceTransportation: 0.50,
-                    preferenceEnvironment: 1.00,
-                    preferenceEntertainment: 0.90,
-                    preferenceHealthcare: 0.70
-                };
+                const response = await getPreferencePresetById(Number(id));
 
                 // Set form values - multiply by 100 to convert decimal to percentage
                 form.reset({
-                    name: data.name,
-                    description: data.description,
+                    name: response.data.name,
+                    description: response.data.description,
                     image: null,
-                    preferenceSafety: Math.round(data.preferenceSafety * 100),
-                    preferenceHealthcare: Math.round(data.preferenceHealthcare * 100),
-                    preferenceEducation: Math.round(data.preferenceEducation * 100),
-                    preferenceShopping: Math.round(data.preferenceShopping * 100),
-                    preferenceTransportation: Math.round(data.preferenceTransportation * 100),
-                    preferenceEnvironment: Math.round(data.preferenceEnvironment * 100),
-                    preferenceEntertainment: Math.round(data.preferenceEntertainment * 100),
+                    preferenceSafety: Math.round(response.data.preferenceSafety * 100),
+                    preferenceHealthcare: Math.round(response.data.preferenceHealthcare * 100),
+                    preferenceEducation: Math.round(response.data.preferenceEducation * 100),
+                    preferenceShopping: Math.round(response.data.preferenceShopping * 100),
+                    preferenceTransportation: Math.round(response.data.preferenceTransportation * 100),
+                    preferenceEnvironment: Math.round(response.data.preferenceEnvironment * 100),
+                    preferenceEntertainment: Math.round(response.data.preferenceEntertainment * 100),
                 });
 
-                // Set existing image
-                setExistingImageUrl(data.image);
+                // Set image preview from API
+                setImagePreview(response.data.image);
 
             } catch (error) {
                 console.error("Error fetching preference preset:", error);
                 toast.error("Không thể tải dữ liệu bộ ưu tiên");
-                navigate("/preference-presets");
+                navigate("/bo-uu-tien");
             } finally {
                 setIsLoading(false);
             }
@@ -197,7 +177,6 @@ export default function EditPreferencePreset() {
 
             // Update form value
             form.setValue('image', file, { shouldValidate: true });
-            setImageChanged(true);
 
             // Create preview
             const reader = new FileReader();
@@ -208,43 +187,42 @@ export default function EditPreferencePreset() {
         }
     };
 
-    // Remove image
-    const handleRemoveImage = () => {
-        form.setValue('image', null, { shouldValidate: true });
-        setImagePreview("");
-        setImageChanged(true);
-    };
 
     // Handle form submit
     const onSubmit = async (data: FormValues) => {
-        try {
-            // TODO: Call API to update preference preset
-            // const formData = new FormData();
-            // formData.append('name', data.name);
-            // formData.append('description', data.description);
-            // if (imageChanged && data.image) {
-            //     formData.append('image', data.image);
-            // }
-            // // Divide by 100 to convert percentage back to decimal
-            // formData.append('preferenceSafety', (data.preferenceSafety / 100).toString());
-            // formData.append('preferenceHealthcare', (data.preferenceHealthcare / 100).toString());
-            // formData.append('preferenceEducation', (data.preferenceEducation / 100).toString());
-            // formData.append('preferenceShopping', (data.preferenceShopping / 100).toString());
-            // formData.append('preferenceTransportation', (data.preferenceTransportation / 100).toString());
-            // formData.append('preferenceEnvironment', (data.preferenceEnvironment / 100).toString());
-            // formData.append('preferenceEntertainment', (data.preferenceEntertainment / 100).toString());
-            // await updatePreferencePreset(id, formData);
+        if (!id) return;
 
-            // Mock success
-            console.log("Form data:", data);
-            console.log("Image changed:", imageChanged);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!imagePreview) {
+            toast.error("Vui lòng chọn ảnh đại diện");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // Prepare update data - convert percentages back to decimals (0-1 range)
+            // TODO: Later will call API to upload image file and get URL, then use that URL
+            const updateData = {
+                name: data.name,
+                description: data.description,
+                image: imagePreview,
+                preferenceSafety: data.preferenceSafety / 100,
+                preferenceHealthcare: data.preferenceHealthcare / 100,
+                preferenceEducation: data.preferenceEducation / 100,
+                preferenceShopping: data.preferenceShopping / 100,
+                preferenceTransportation: data.preferenceTransportation / 100,
+                preferenceEnvironment: data.preferenceEnvironment / 100,
+                preferenceEntertainment: data.preferenceEntertainment / 100,
+            };
+
+            await updatePreferencePreset(Number(id), updateData);
 
             toast.success("Cập nhật bộ ưu tiên thành công!");
-            navigate("/preference-presets");
+            navigate("/bo-uu-tien");
         } catch (error) {
             console.error("Error updating preference preset:", error);
             toast.error("Có lỗi xảy ra khi cập nhật bộ ưu tiên");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -353,87 +331,59 @@ export default function EditPreferencePreset() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-gray-700">
-                                            Ảnh đại diện
+                                            Ảnh đại diện <span className="text-red-500">*</span>
                                         </FormLabel>
                                         <FormControl>
-                                            <div>
-                                                {!imagePreview && !existingImageUrl ? (
-                                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-                                                        <input
-                                                            id="image"
-                                                            type="file"
-                                                            accept="image/*"
-                                                            onChange={handleImageChange}
-                                                            className="hidden"
-                                                            ref={field.ref}
-                                                            name={field.name}
-                                                            onBlur={field.onBlur}
+                                            <div className="flex flex-col items-center space-y-4">
+                                                {imagePreview ? (
+                                                    <div className="w-full max-w-sm aspect-square rounded-lg overflow-hidden border border-gray-200">
+                                                        <img
+                                                            src={imagePreview}
+                                                            alt="Preview"
+                                                            className="w-full h-full object-cover"
                                                         />
-                                                        <label
-                                                            htmlFor="image"
-                                                            className="cursor-pointer flex flex-col items-center gap-3"
-                                                        >
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full max-w-sm aspect-square border-2 border-dashed border-gray-300 rounded-lg p-8 flex items-center justify-center hover:border-gray-400 transition-colors">
+                                                        <div className="flex flex-col items-center gap-3 text-center">
                                                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                                                                 <Upload className="w-8 h-8 text-gray-400" />
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium text-gray-700">
-                                                                    Nhấn để tải ảnh lên
+                                                                    Chưa có ảnh
                                                                 </p>
                                                                 <p className="text-xs text-gray-500 mt-1">
-                                                                    PNG, JPG, JPEG (tối đa 5MB)
+                                                                    Vui lòng tải ảnh lên
                                                                 </p>
                                                             </div>
-                                                        </label>
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-3">
-                                                        <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                                                            {imagePreview ? (
-                                                                <img
-                                                                    src={imagePreview}
-                                                                    alt="Preview"
-                                                                    className="w-full h-64 object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-64 flex items-center justify-center bg-gray-50">
-                                                                    <span className="text-8xl">{existingImageUrl}</span>
-                                                                </div>
-                                                            )}
-                                                            <Button
-                                                                type="button"
-                                                                onClick={handleRemoveImage}
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                className="absolute top-3 right-3"
-                                                            >
-                                                                <X className="w-4 h-4 mr-1" />
-                                                                Xóa
-                                                            </Button>
                                                         </div>
-                                                        {!imageChanged && existingImageUrl && (
-                                                            <div>
-                                                                <input
-                                                                    id="image-change"
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    onChange={handleImageChange}
-                                                                    className="hidden"
-                                                                    ref={field.ref}
-                                                                    name={field.name}
-                                                                    onBlur={field.onBlur}
-                                                                />
-                                                                <label
-                                                                    htmlFor="image-change"
-                                                                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium transition-colors"
-                                                                >
-                                                                    <Upload className="w-4 h-4" />
-                                                                    Thay đổi ảnh
-                                                                </label>
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 )}
+
+                                                {/* Change Image Button */}
+                                                <div className="text-center">
+                                                    <input
+                                                        id="image-upload"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                        ref={field.ref}
+                                                        name={field.name}
+                                                        onBlur={field.onBlur}
+                                                    />
+                                                    <label
+                                                        htmlFor="image-upload"
+                                                        className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium transition-colors"
+                                                    >
+                                                        <Upload className="w-4 h-4" />
+                                                        {imagePreview ? "Thay đổi ảnh" : "Tải ảnh lên"}
+                                                    </label>
+                                                    <p className="text-xs text-gray-500 mt-2">
+                                                        PNG, JPG, JPEG (tối đa 5MB)
+                                                    </p>
+                                                </div>
                                             </div>
                                         </FormControl>
                                         <FormMessage />
@@ -517,18 +467,18 @@ export default function EditPreferencePreset() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => navigate("/preference-presets")}
-                                    disabled={form.formState.isSubmitting}
+                                    onClick={() => navigate("/bo-uu-tien")}
+                                    disabled={isSubmitting}
                                     className="min-w-[150px] cursor-pointer"
                                 >
                                     Hủy bỏ
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={form.formState.isSubmitting}
+                                    disabled={isSubmitting}
                                     className="min-w-[150px] cursor-pointer bg-[#008DDA] hover:bg-[#0077b6]"
                                 >
-                                    {form.formState.isSubmitting ? (
+                                    {isSubmitting ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                             Đang cập nhật...

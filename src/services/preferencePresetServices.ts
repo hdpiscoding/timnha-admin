@@ -36,6 +36,7 @@ export const updatePreferencePreset = async (id: number, data: {
     preferenceShopping: number,
     preferenceTransportation: number,
     preferenceEnvironment: number,
+    preferenceEntertainment: number
 })=> {
     const response = await instance.put(`user/admin/preference-presets/${id}`, data);
     return response.data;

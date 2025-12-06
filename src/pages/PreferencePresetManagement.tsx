@@ -19,10 +19,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Filter, Plus, Trash2 } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import type { PreferencePreset } from "@/types/preference-preset";
 import {useNavigate} from "react-router-dom";
+import { getAllPreferencePresets, deletePreferencePreset } from "@/services/preferencePresetServices";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
 
@@ -43,80 +45,27 @@ export default function PreferencePresetManagement() {
     const fetchPresets = async (_page: number, _sort: SortOption) => {
         setIsLoading(true);
         try {
-            // TODO: Call API to get preference presets
-            // const response = await getPreferencePresets(_page, _sort);
+            const response = await getAllPreferencePresets();
 
-            // Mock data
-            const mockPresets: PreferencePreset[] = [
-                {
-                    id: 1,
-                    name: "Gia đình trẻ",
-                    description: "Phù hợp cho gia đình có con nhỏ, ưu tiên giáo dục, y tế và môi trường sống an toàn.",
-                    image: "https://via.placeholder.com/300x200",
-                    preferenceSafety: 85,
-                    preferenceHealthcare: 90,
-                    preferenceEducation: 95,
-                    preferenceShopping: 70,
-                    preferenceTransportation: 75,
-                    preferenceEnvironment: 80,
-                    preferenceEntertainment: 60,
-                },
-                {
-                    id: 2,
-                    name: "Người đi làm",
-                    description: "Dành cho người độc thân hoặc cặp đôi đi làm, ưu tiên giao thông, tiện ích và giải trí.",
-                    image: "https://via.placeholder.com/300x200",
-                    preferenceSafety: 70,
-                    preferenceHealthcare: 65,
-                    preferenceEducation: 50,
-                    preferenceShopping: 85,
-                    preferenceTransportation: 95,
-                    preferenceEnvironment: 60,
-                    preferenceEntertainment: 80,
-                },
-                {
-                    id: 3,
-                    name: "Người cao tuổi",
-                    description: "Phù hợp cho người cao tuổi, ưu tiên y tế, môi trường yên tĩnh và an ninh.",
-                    image: "https://via.placeholder.com/300x200",
-                    preferenceSafety: 90,
-                    preferenceHealthcare: 95,
-                    preferenceEducation: 40,
-                    preferenceShopping: 75,
-                    preferenceTransportation: 60,
-                    preferenceEnvironment: 85,
-                    preferenceEntertainment: 50,
-                },
-                {
-                    id: 4,
-                    name: "Sinh viên",
-                    description: "Dành cho sinh viên, ưu tiên giao thông, tiện ích mua sắm và giải trí.",
-                    image: "https://via.placeholder.com/300x200",
-                    preferenceSafety: 65,
-                    preferenceHealthcare: 60,
-                    preferenceEducation: 80,
-                    preferenceShopping: 85,
-                    preferenceTransportation: 90,
-                    preferenceEnvironment: 55,
-                    preferenceEntertainment: 85,
-                },
-                {
-                    id: 5,
-                    name: "Doanh nhân",
-                    description: "Phù hợp cho doanh nhân, ưu tiên an ninh, giao thông thuận tiện và tiện ích cao cấp.",
-                    image: "https://via.placeholder.com/300x200",
-                    preferenceSafety: 95,
-                    preferenceHealthcare: 80,
-                    preferenceEducation: 70,
-                    preferenceShopping: 90,
-                    preferenceTransportation: 95,
-                    preferenceEnvironment: 75,
-                    preferenceEntertainment: 70,
-                },
-            ];
+            // Map API response data, converting decimal values (0.00-1.00) to percentages (0-100)
+            const mappedPresets: PreferencePreset[] = response.data.map((preset: PreferencePreset) => ({
+                id: preset.id,
+                name: preset.name,
+                description: preset.description,
+                image: preset.image,
+                createAt: preset.createAt,
+                preferenceSafety: Math.round(preset.preferenceSafety * 100),
+                preferenceHealthcare: Math.round(preset.preferenceHealthcare * 100),
+                preferenceEducation: Math.round(preset.preferenceEducation * 100),
+                preferenceShopping: Math.round(preset.preferenceShopping * 100),
+                preferenceTransportation: Math.round(preset.preferenceTransportation * 100),
+                preferenceEnvironment: Math.round(preset.preferenceEnvironment * 100),
+                preferenceEntertainment: Math.round(preset.preferenceEntertainment * 100),
+            }));
 
-            setPresets(mockPresets);
-            setTotalPages(2); // Mock total pages
+            setPresets(mappedPresets);
+            // Note: API doesn't provide pagination info, so we'll show all results on one page
+            setTotalPages(1);
         } catch (error) {
             console.error("Error fetching preference presets:", error);
             toast.error("Không thể tải danh sách bộ ưu tiên");
@@ -160,8 +109,7 @@ export default function PreferencePresetManagement() {
         if (!presetToDelete) return;
 
         try {
-            // TODO: Call API to delete preset
-            // await deletePreferencePreset(presetToDelete.id);
+            await deletePreferencePreset(presetToDelete.id);
 
             toast.success(`Đã xóa bộ ưu tiên "${presetToDelete.name}" thành công`);
 
@@ -197,7 +145,7 @@ export default function PreferencePresetManagement() {
                         </div>
                         <Button
                             onClick={handleAddNew}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 cursor-pointer hover:bg-[#0064A6]"
                         >
                             <Plus className="w-4 h-4" />
                             Thêm mới
@@ -242,8 +190,43 @@ export default function PreferencePresetManagement() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="p-6">
                         {isLoading ? (
-                            <div className="text-center py-12 text-gray-500">
-                                Đang tải dữ liệu...
+                            <div className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex flex-col lg:flex-row gap-4 bg-white rounded-lg shadow-sm p-4 border border-gray-200"
+                                    >
+                                        {/* Skeleton for Image */}
+                                        <div className="flex-shrink-0">
+                                            <Skeleton className="w-24 h-24 rounded-lg" />
+                                        </div>
+
+                                        {/* Skeleton for Content */}
+                                        <div className="flex flex-col flex-1 gap-2">
+                                            {/* Skeleton for Name */}
+                                            <Skeleton className="h-6 w-48" />
+
+                                            {/* Skeleton for Description */}
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-3/4" />
+
+                                            {/* Skeleton for Preferences */}
+                                            <div className="flex flex-wrap gap-3 mt-1">
+                                                {Array.from({ length: 7 }).map((_, idx) => (
+                                                    <div key={idx} className="flex items-center gap-1.5">
+                                                        <Skeleton className="w-6 h-6 rounded-md" />
+                                                        <Skeleton className="h-4 w-8" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Skeleton for Delete Button */}
+                                        <div className="flex gap-2 flex-shrink-0 lg:items-center lg:justify-center">
+                                            <Skeleton className="h-9 w-20" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : presets.length === 0 ? (
                             <div className="text-center py-12 text-gray-500">
@@ -252,28 +235,12 @@ export default function PreferencePresetManagement() {
                         ) : (
                             <div className="space-y-4">
                                 {presets.map((preset) => (
-                                    <div
+                                    <PreferencePresetListItem
                                         key={preset.id}
-                                        className="flex items-center gap-4"
-                                    >
-                                        <div className="flex-1">
-                                            <PreferencePresetListItem
-                                                preset={preset}
-                                                onClick={() => handlePresetClick(preset.id)}
-                                            />
-                                        </div>
-                                        <div className="flex-shrink-0">
-                                            <Button
-                                                onClick={() => handleDeleteClick(preset)}
-                                                variant="destructive"
-                                                size="sm"
-                                                className="cursor-pointer"
-                                            >
-                                                <Trash2 className="w-4 h-4 mr-1" />
-                                                Xóa
-                                            </Button>
-                                        </div>
-                                    </div>
+                                        preset={preset}
+                                        onClick={() => handlePresetClick(preset.id)}
+                                        onDelete={() => handleDeleteClick(preset)}
+                                    />
                                 ))}
                             </div>
                         )}

@@ -8,11 +8,13 @@ import PreferencePresetManagement from "@/pages/PreferencePresetManagement.tsx";
 import {PrivateRoute} from "@/components/private-route.tsx";
 import CreatePreferencePreset from "@/pages/CreatePreferencePreset.tsx";
 import EditPreferencePreset from "@/pages/EditPreferencePreset.tsx";
+import ScrollToTop from "@/components/scroll-to-top.tsx";
 
 function App() {
   return (
       <>
           <Router>
+              <ScrollToTop />
               <Routes>
                   <Route path="/dang-nhap" element={<Login />} />
 

@@ -11,11 +11,22 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UserFilterDialog, type FilterValues } from "@/components/user-filter-dialog";
+import { RejectReasonDialog } from "@/components/reject-reason-dialog";
 import { Filter } from "lucide-react";
 import { toast } from "react-toastify";
 import { useSearchQuery } from "@/hooks/use-search-query";
-import { searchUsers } from "@/services/userServices";
+import { searchUsers, approveSellerRequest } from "@/services/userServices";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Types
@@ -43,6 +54,21 @@ export default function UserManagement() {
 
     // Filter Dialog State
     const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+
+    // Alert Dialog State for Approve
+    const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+    const [alertDialogLoading, setAlertDialogLoading] = useState(false);
+    const [alertDialogConfig, setAlertDialogConfig] = useState<{
+        title: string;
+        description: string;
+        userName: string;
+        onConfirm: () => Promise<void>;
+    } | null>(null);
+
+    // Reject Reason Dialog State
+    const [rejectReasonDialogOpen, setRejectReasonDialogOpen] = useState(false);
+    const [pendingUserIdForReject, setPendingUserIdForReject] = useState<string | null>(null);
+    const [pendingUserNameForReject, setPendingUserNameForReject] = useState<string>("");
 
     // Build initial filters from URL filters for dialog
     const getInitialFiltersForDialog = (): FilterValues => {
@@ -142,6 +168,56 @@ export default function UserManagement() {
             { key: "becomeSellerApproveStatus", operator: "eq", value: newFilters.becomeSellerApproveStatus?.id || "" },
         ], true); // Reset page to 1 atomically
         toast.success("Đã áp dụng bộ lọc");
+    };
+
+    // Handle Approve User
+    const handleApproveUser = (userId: string, userName: string) => {
+        setAlertDialogConfig({
+            title: "Xác nhận duyệt",
+            description: `Bạn có chắc chắn muốn duyệt yêu cầu trở thành người bán của "${userName}"?`,
+            userName: userName,
+            onConfirm: async () => {
+                setAlertDialogLoading(true);
+                try {
+                    await approveSellerRequest("APPROVED", "", Number(userId));
+                    toast.success(`Đã duyệt yêu cầu của ${userName}`);
+                    setAlertDialogOpen(false);
+                    // Refresh users list
+                    fetchUsers();
+                } catch (error) {
+                    console.error("Error approving user:", error);
+                    toast.error("Có lỗi xảy ra khi duyệt yêu cầu");
+                } finally {
+                    setAlertDialogLoading(false);
+                }
+            }
+        });
+        setAlertDialogOpen(true);
+    };
+
+    // Handle Reject User - Open reject reason dialog
+    const handleRejectUser = (userId: string, userName: string) => {
+        setPendingUserIdForReject(userId);
+        setPendingUserNameForReject(userName);
+        setRejectReasonDialogOpen(true);
+    };
+
+    // Handle Reject User Confirm
+    const handleRejectUserConfirm = async (reason: string) => {
+        if (!pendingUserIdForReject) return;
+
+        try {
+            await approveSellerRequest("REJECTED", reason, Number(pendingUserIdForReject));
+            toast.success(`Đã từ chối yêu cầu của ${pendingUserNameForReject}`);
+            setRejectReasonDialogOpen(false);
+            setPendingUserIdForReject(null);
+            setPendingUserNameForReject("");
+            // Refresh users list
+            fetchUsers();
+        } catch (error) {
+            console.error("Error rejecting user:", error);
+            toast.error("Có lỗi xảy ra khi từ chối yêu cầu");
+        }
     };
 
     // Sync sortBy state with URL sorts
@@ -268,6 +344,8 @@ export default function UserManagement() {
                                         key={user.id}
                                         {...user}
                                         onClick={(id) => navigate(`/nguoi-dung/${id}`)}
+                                        onApprove={(id, fullName) => handleApproveUser(id, fullName)}
+                                        onReject={(id, fullName) => handleRejectUser(id, fullName)}
                                     />
                                 ))}
                             </div>
@@ -292,6 +370,39 @@ export default function UserManagement() {
                 onOpenChange={setFilterDialogOpen}
                 onApplyFilter={handleApplyFilter}
                 initialFilters={getInitialFiltersForDialog()}
+            />
+
+            {/* Alert Dialog for Approve */}
+            <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{alertDialogConfig?.title}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {alertDialogConfig?.description}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={alertDialogLoading}>Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                alertDialogConfig?.onConfirm();
+                            }}
+                            disabled={alertDialogLoading}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {alertDialogLoading ? "Đang xử lý..." : "Xác nhận"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Reject Reason Dialog */}
+            <RejectReasonDialog
+                open={rejectReasonDialogOpen}
+                onOpenChange={setRejectReasonDialogOpen}
+                onConfirm={handleRejectUserConfirm}
+                userName={pendingUserNameForReject}
             />
         </div>
     );

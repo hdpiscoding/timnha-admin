@@ -92,8 +92,8 @@ export function ListingFilterDialog({
     };
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.trim();
-        setFilters({ ...filters, title: value || null });
+        // const value = e.target.value.trim();
+        setFilters({ ...filters, title: e.target.value || null });
     };
 
     const handleListingTypeChange = (value: string) => {

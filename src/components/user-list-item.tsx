@@ -9,8 +9,8 @@ interface UserListItemProps {
     phoneNumber: string;
     becomeSellerApproveStatus?: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
     onClick?: (id: string) => void;
-    onApprove?: (id: string) => void;
-    onReject?: (id: string) => void;
+    onApprove?: (id: string, fullName: string) => void;
+    onReject?: (id: string, fullName: string) => void;
 }
 
 export const UserListItem = ({
@@ -29,12 +29,12 @@ export const UserListItem = ({
 
     const handleApprove = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onApprove?.(id);
+        onApprove?.(id, fullName);
     };
 
     const handleReject = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onReject?.(id);
+        onReject?.(id, fullName);
     };
 
     return (

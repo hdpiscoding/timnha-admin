@@ -64,8 +64,8 @@ export function UserFilterDialog({
     };
 
     const handleFullNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.trim();
-        setFilters({ ...filters, fullName: value || null });
+        // const value = e.target.value.trim();
+        setFilters({ ...filters, fullName: e.target.value || null });
     };
 
     const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {

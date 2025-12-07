@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -13,7 +12,23 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, User as UserIcon, Phone, MapPin, Calendar, ArrowLeft, Check, X } from "lucide-react";
+import {
+    Shield,
+    Heart,
+    GraduationCap,
+    ShoppingBag,
+    Car,
+    Leaf,
+    Music,
+    User as UserIcon,
+    Phone,
+    MapPin,
+    Calendar,
+    ArrowLeft,
+    Check,
+    X,
+    Loader2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
 import type { User } from "@/types/user";
@@ -181,49 +196,29 @@ export default function UserDetail() {
         }
     };
 
-    // Loading state
+    // if (!user) {
+    //     return (
+    //         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    //             <div className="text-center">
+    //                 <p className="text-gray-600">Không tìm thấy thông tin người dùng</p>
+    //                 <Button
+    //                     onClick={() => navigate("/nguoi-dung")}
+    //                     className="mt-4 bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
+    //                 >
+    //                     Quay lại
+    //                 </Button>
+    //             </div>
+    //         </div>
+    //     );
+    // }
+
+    // Show loading state
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 py-8 px-4">
-                <div className="max-w-5xl mx-auto space-y-6">
-                    {/* Header Skeleton */}
-                    <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                        <Skeleton className="h-8 w-64 mb-4" />
-                        <div className="flex items-start gap-6">
-                            <Skeleton className="w-32 h-32 rounded-full" />
-                            <div className="flex-1 space-y-3">
-                                <Skeleton className="h-6 w-48" />
-                                <Skeleton className="h-4 w-36" />
-                                <Skeleton className="h-4 w-40" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Content Skeleton */}
-                    <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                        <Skeleton className="h-6 w-40 mb-4" />
-                        <div className="space-y-3">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (!user) {
-        return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-gray-600">Không tìm thấy thông tin người dùng</p>
-                    <Button
-                        onClick={() => navigate("/nguoi-dung")}
-                        className="mt-4 bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
-                    >
-                        Quay lại
-                    </Button>
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-12 h-12 text-[#008DDA] animate-spin" />
+                    <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
                 </div>
             </div>
         );
@@ -251,10 +246,10 @@ export default function UserDetail() {
                     <div className="flex flex-col md:flex-row items-start gap-6">
                         {/* Avatar */}
                         <div className="flex-shrink-0">
-                            {user.avatarUrl ? (
+                            {user?.avatarUrl ? (
                                 <img
-                                    src={user.avatarUrl}
-                                    alt={user.fullName}
+                                    src={user?.avatarUrl}
+                                    alt={user?.fullName}
                                     className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
                                 />
                             ) : (
@@ -268,7 +263,7 @@ export default function UserDetail() {
                         <div className="flex-1 space-y-4">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900">
-                                    {user.fullName}
+                                    {user?.fullName}
                                 </h2>
                             </div>
 
@@ -276,15 +271,15 @@ export default function UserDetail() {
                                 <div className="flex items-center gap-2 text-gray-700">
                                     <Phone className="w-5 h-5 text-gray-500" />
                                     <span className="font-medium">Số điện thoại:</span>
-                                    <span>{user.phoneNumber}</span>
+                                    <span>{user?.phoneNumber}</span>
                                 </div>
 
-                                {user.liveAddress && (
+                                {user?.liveAddress && (
                                     <div className="flex items-start gap-2 text-gray-700">
                                         <MapPin className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
                                         <div>
                                             <span className="font-medium">Địa chỉ:</span>
-                                            <span className="ml-2">{user.liveAddress}</span>
+                                            <span className="ml-2">{user?.liveAddress}</span>
                                         </div>
                                     </div>
                                 )}
@@ -292,7 +287,7 @@ export default function UserDetail() {
                                 <div className="flex items-center gap-2 text-gray-700">
                                     <Calendar className="w-5 h-5 text-gray-500" />
                                     <span className="font-medium">Cập nhật lần cuối:</span>
-                                    <span>{formatDateTime(user.updateAt)}</span>
+                                    <span>{formatDateTime(String(user?.updateAt))}</span>
                                 </div>
                             </div>
                         </div>
@@ -308,11 +303,11 @@ export default function UserDetail() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <span className="text-gray-700 font-medium">Trạng thái:</span>
-                            {getStatusBadge(user.becomeSellerApproveStatus)}
+                            {getStatusBadge(String(user?.becomeSellerApproveStatus))}
                         </div>
 
                         {/* Approve/Reject Buttons - Show only if PENDING */}
-                        {user.becomeSellerApproveStatus === "PENDING" && (
+                        {user?.becomeSellerApproveStatus === "PENDING" && (
                             <div className="flex gap-3">
                                 <Button
                                     onClick={handleApprove}
@@ -335,14 +330,14 @@ export default function UserDetail() {
                 </div>
 
                 {/* Preference Type Card */}
-                {user.preferenceType && (
+                {user?.preferenceType && (
                     <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">
                             Loại ưu tiên
                         </h2>
                         <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-base py-2 px-4">
-                                {user.preferenceType}
+                                {user?.preferenceType}
                             </Badge>
                         </div>
                     </div>
@@ -400,7 +395,7 @@ export default function UserDetail() {
                         <AlertDialogTitle>Xác nhận duyệt</AlertDialogTitle>
                         <AlertDialogDescription>
                             Bạn có chắc chắn muốn duyệt yêu cầu trở thành người bán của{" "}
-                            <span className="font-semibold">{user.fullName}</span>?
+                            <span className="font-semibold">{user?.fullName}</span>?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -422,7 +417,7 @@ export default function UserDetail() {
                         <AlertDialogTitle>Xác nhận từ chối</AlertDialogTitle>
                         <AlertDialogDescription>
                             Bạn có chắc chắn muốn từ chối yêu cầu trở thành người bán của{" "}
-                            <span className="font-semibold">{user.fullName}</span>?
+                            <span className="font-semibold">{user?.fullName}</span>?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

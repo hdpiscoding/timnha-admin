@@ -10,42 +10,53 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ListingFilterDialog, type FilterValues } from "@/components/listing-filter-dialog";
 import { Filter } from "lucide-react";
 import { toast } from "react-toastify";
+import { searchProperties, approveListingRequest } from "@/services/propertyServices";
 import { Skeleton } from "@/components/ui/skeleton";
-import { searchProperties } from "@/services/propertyServices";
-import type { PropertyListing } from "@/types/property-listing";
 import { useSearchQuery } from "@/hooks/use-search-query";
 import { getPriceRangeValue } from "@/utils/priceRangesHelper";
 import { getAreaRangeValue } from "@/utils/areaRangeHelper";
 import { getDistrictNameById } from "@/utils/districtHelper";
-
-// Types
-interface Property {
-    id: string;
-    title: string;
-    price: number;
-    area: number;
-    address: string;
-    imageUrl: string;
-    createdAt: string;
-}
+import {useNavigate} from "react-router-dom";
+import type {PropertyListing} from "@/types/property-listing";
 
 type SortOption = "newest" | "oldest" | "price-asc" | "price-desc" | "area-asc" | "area-desc";
 
 export default function PropertyManagement() {
-    const [properties, setProperties] = useState<Property[]>([]);
+    const [properties, setProperties] = useState<PropertyListing[]>([]);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [sortBy, setSortBy] = useState<SortOption>("newest");
     const [totalListings, setTotalListings] = useState(0);
+    const navigate = useNavigate();
 
     // Use search query hook for URL sync
     const { filters, sorts, page, setMultipleFilters, setSingleSort, setPage } = useSearchQuery();
 
     // Filter Dialog State
     const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+
+    // Alert Dialog State
+    const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+    const [alertDialogLoading, setAlertDialogLoading] = useState(false);
+    const [alertDialogConfig, setAlertDialogConfig] = useState<{
+        title: string;
+        description: string;
+        propertyTitle: string;
+        onConfirm: () => Promise<void>;
+    } | null>(null);
 
     // Handle Sort Change
     const handleSortChange = (value: SortOption) => {
@@ -118,15 +129,65 @@ export default function PropertyManagement() {
             { key: "approvalStatus", operator: "eq", value: newFilters.approvalStatus || "" },
             { key: "listingType", operator: "eq", value: newFilters.listingType || "" },
             { key: "propertyType", operator: "eq", value: newFilters.propertyType?.id || "" },
-            { key: "price", operator: "rng", value: newFilters.price || "" }, // Store ID in URL
-            { key: "area", operator: "rng", value: newFilters.area || "" }, // Store ID in URL
-            { key: "addressDistrict", operator: "eq", value: newFilters.addressDistrict?.id || "" }, // Store ID in URL
+            { key: "price", operator: "rng", value: newFilters.price || "" },
+            { key: "area", operator: "rng", value: newFilters.area || "" },
+            { key: "addressDistrict", operator: "eq", value: newFilters.addressDistrict?.id || "" },
             { key: "title", operator: "lk", value: newFilters.title?.trim() || "" },
             { key: "numBedrooms", operator: "eq", value: newFilters.numBedrooms || "" },
             { key: "numBathrooms", operator: "eq", value: newFilters.numBathrooms || "" },
             { key: "numFloors", operator: "eq", value: newFilters.numFloors || "" },
-        ], true); // Reset page to 1 atomically
+        ], true);
         toast.success("Đã áp dụng bộ lọc");
+    };
+
+    // Handle Approve Property
+    const handleApproveProperty = (propertyId: string, propertyTitle: string) => {
+        setAlertDialogConfig({
+            title: "Xác nhận duyệt",
+            description: `Bạn có chắc chắn muốn duyệt tin đăng "${propertyTitle}"?`,
+            propertyTitle: propertyTitle,
+            onConfirm: async () => {
+                setAlertDialogLoading(true);
+                try {
+                    await approveListingRequest("APPROVED", Number(propertyId));
+                    toast.success(`Đã duyệt tin đăng "${propertyTitle}"`);
+                    setAlertDialogOpen(false);
+                    // Trigger re-fetch
+                    setPage(page);
+                } catch (error) {
+                    console.error("Error approving property:", error);
+                    toast.error("Có lỗi xảy ra khi duyệt tin đăng");
+                } finally {
+                    setAlertDialogLoading(false);
+                }
+            }
+        });
+        setAlertDialogOpen(true);
+    };
+
+    // Handle Reject Property
+    const handleRejectProperty = (propertyId: string, propertyTitle: string) => {
+        setAlertDialogConfig({
+            title: "Xác nhận từ chối",
+            description: `Bạn có chắc chắn muốn từ chối tin đăng "${propertyTitle}"?`,
+            propertyTitle: propertyTitle,
+            onConfirm: async () => {
+                setAlertDialogLoading(true);
+                try {
+                    await approveListingRequest("REJECTED", Number(propertyId));
+                    toast.success(`Đã từ chối tin đăng "${propertyTitle}"`);
+                    setAlertDialogOpen(false);
+                    // Trigger re-fetch
+                    setPage(page);
+                } catch (error) {
+                    console.error("Error rejecting property:", error);
+                    toast.error("Có lỗi xảy ra khi từ chối tin đăng");
+                } finally {
+                    setAlertDialogLoading(false);
+                }
+            }
+        });
+        setAlertDialogOpen(true);
     };
 
     // Sync sortBy state with URL sorts
@@ -219,7 +280,7 @@ export default function PropertyManagement() {
                 setTotalListings(response.data.records || 0);
 
                 // Map PropertyListing to Property format
-                const mappedProperties: Property[] = response.data.items.map((listing: PropertyListing) => {
+                const mappedProperties: PropertyListing[] = response.data.items.map((listing: PropertyListing) => {
                     // Build full address
                     const addressParts = [
                         listing.addressStreet,
@@ -349,7 +410,17 @@ export default function PropertyManagement() {
                                 {properties.map((property) => (
                                     <PropertyListItem
                                         key={property.id}
-                                        {...property}
+                                        id={property.id.toString()}
+                                        title={property.title}
+                                        price={property.price}
+                                        area={property.area}
+                                        address={`${property.addressWard}, ${property.addressDistrict}, ${property.addressCity}`}
+                                        imageUrl={property.imageUrls?.[0] || ""}
+                                        createdAt={property.createdAt}
+                                        approvalStatus={property.approvalStatus as "NONE" | "PENDING" | "APPROVED" | "REJECTED"}
+                                        onClick={() => navigate(`/tin-dang/${property.id}`)}
+                                        onApprove={(id) => handleApproveProperty(id, property.title)}
+                                        onReject={(id) => handleRejectProperty(id, property.title)}
                                     />
                                 ))}
                             </div>
@@ -375,6 +446,31 @@ export default function PropertyManagement() {
                 onApplyFilter={handleApplyFilter}
                 initialFilters={getInitialFiltersForDialog()}
             />
+
+            {/* Alert Dialog for Approve/Reject */}
+            <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{alertDialogConfig?.title}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {alertDialogConfig?.description}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={alertDialogLoading}>Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                alertDialogConfig?.onConfirm();
+                            }}
+                            disabled={alertDialogLoading}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {alertDialogLoading ? "Đang xử lý..." : "Xác nhận"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

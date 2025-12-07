@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { formatPrice, formatArea, formatDateTime } from "@/utils/generalFormat.ts";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
@@ -15,6 +14,7 @@ interface PropertyListItemProps {
     approvalStatus?: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
     onApprove?: (id: string) => void;
     onReject?: (id: string) => void;
+    onClick?: () => void;
 }
 
 export const PropertyListItem = ({
@@ -28,6 +28,7 @@ export const PropertyListItem = ({
     approvalStatus,
     onApprove,
     onReject,
+    onClick,
 }: PropertyListItemProps) => {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -43,12 +44,16 @@ export const PropertyListItem = ({
         onReject?.(id);
     };
 
+    const handleClick = () => {
+        onClick?.();
+    };
+
     return (
         <div className="flex flex-col lg:flex-row gap-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-3">
-            {/* Main Content Wrapper - Link for navigation */}
-            <Link
-                to={`/bat-dong-san/${id}`}
-                className="flex flex-1 gap-4 min-w-0"
+            {/* Main Content Wrapper - Clickable for navigation */}
+            <div
+                onClick={handleClick}
+                className={`flex flex-1 gap-4 min-w-0 ${onClick ? 'cursor-pointer' : ''}`}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
@@ -92,7 +97,7 @@ export const PropertyListItem = ({
                         </span>
                     </div>
                 </div>
-            </Link>
+            </div>
 
             {/* Approval Buttons - Show only if status is PENDING */}
             {approvalStatus === "PENDING" && (

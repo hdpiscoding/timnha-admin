@@ -351,7 +351,7 @@ export default function UserDetail() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {preferenceConfig.map((config) => {
-                            const value = user[config.key] as number | null;
+                            const value = user?.[config.key] as number | null;
                             const Icon = config.icon;
                             const percentage = value !== null ? Math.round(value * 100) : 0;
 

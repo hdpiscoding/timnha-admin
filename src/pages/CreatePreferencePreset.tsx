@@ -378,10 +378,10 @@ export default function CreatePreferencePreset() {
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                             <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-right">
-                                                                {field.value as number}
+                                                                {field.value as number}%
                                                             </span>
                                                                 <span className="text-sm text-gray-500">
-                                                                / 100
+                                                                / 100%
                                                             </span>
                                                             </div>
                                                         </div>

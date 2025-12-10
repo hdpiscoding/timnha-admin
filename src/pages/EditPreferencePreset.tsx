@@ -18,6 +18,7 @@ import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, Lo
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
 import { getPreferencePresetById, updatePreferencePreset } from "@/services/preferencePresetServices";
+import { uploadImage } from "@/services/mediaServices";
 
 // Define form values type
 interface FormValues {
@@ -199,12 +200,19 @@ export default function EditPreferencePreset() {
 
         setIsSubmitting(true);
         try {
-            // Prepare update data - convert percentages back to decimals (0-1 range)
-            // TODO: Later will call API to upload image file and get URL, then use that URL
+            let imageUrl = imagePreview;
+
+            // Step 1: If user selected a new image, upload it
+            if (data.image) {
+                const uploadResponse = await uploadImage(data.image);
+                imageUrl = uploadResponse.data.mediaUrl;
+            }
+
+            // Step 2: Prepare update data - convert percentages back to decimals (0-1 range)
             const updateData = {
                 name: data.name,
                 description: data.description,
-                image: imagePreview,
+                image: imageUrl,
                 preferenceSafety: data.preferenceSafety / 100,
                 preferenceHealthcare: data.preferenceHealthcare / 100,
                 preferenceEducation: data.preferenceEducation / 100,
@@ -214,6 +222,7 @@ export default function EditPreferencePreset() {
                 preferenceEntertainment: data.preferenceEntertainment / 100,
             };
 
+            // Step 3: Update preference preset
             await updatePreferencePreset(Number(id), updateData);
 
             toast.success("Cập nhật bộ ưu tiên thành công!");

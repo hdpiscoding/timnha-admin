@@ -273,7 +273,7 @@ export default function PreferencePresetManagement() {
                             Hủy
                         </AlertDialogCancel>
                         <AlertDialogAction
-                            className="cursor-pointer"
+                            className="bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
                             onClick={handleDeleteConfirm}
                         >
                             Xác nhận

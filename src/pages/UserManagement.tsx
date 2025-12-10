@@ -382,14 +382,14 @@ export default function UserManagement() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={alertDialogLoading}>Hủy</AlertDialogCancel>
+                        <AlertDialogCancel className="cursor-pointer" disabled={alertDialogLoading}>Hủy</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(e) => {
                                 e.preventDefault();
                                 alertDialogConfig?.onConfirm();
                             }}
                             disabled={alertDialogLoading}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
                         >
                             {alertDialogLoading ? "Đang xử lý..." : "Xác nhận"}
                         </AlertDialogAction>
@@ -402,7 +402,6 @@ export default function UserManagement() {
                 open={rejectReasonDialogOpen}
                 onOpenChange={setRejectReasonDialogOpen}
                 onConfirm={handleRejectUserConfirm}
-                userName={pendingUserNameForReject}
             />
         </div>
     );

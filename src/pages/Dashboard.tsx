@@ -426,7 +426,7 @@ export default function Dashboard() {
                             Hủy
                         </AlertDialogCancel>
                         <AlertDialogAction
-                            className="cursor-pointer"
+                            className="cursor-pointer bg-[#008DDA] hover:bg-[#0077b6]"
                             disabled={alertDialogLoading}
                             onClick={async () => {
                                 if (!alertDialogConfig?.onConfirm) return;

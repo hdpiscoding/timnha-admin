@@ -273,35 +273,14 @@ export default function PropertyManagement() {
                 const response = await searchProperties({
                     filters: apiFilters,
                     sorts: apiSorts,
-                    rpp: 2,
+                    rpp: 5,
                     page: page, // Use page from URL
                 });
 
                 setTotalListings(response.data.records || 0);
 
-                // Map PropertyListing to Property format
-                const mappedProperties: PropertyListing[] = response.data.items.map((listing: PropertyListing) => {
-                    // Build full address
-                    const addressParts = [
-                        listing.addressStreet,
-                        listing.addressWard,
-                        listing.addressDistrict,
-                        listing.addressCity,
-                    ].filter(Boolean);
-                    const fullAddress = addressParts.join(", ");
-
-                    return {
-                        id: listing.id.toString(),
-                        title: listing.title,
-                        price: listing.price,
-                        area: listing.area,
-                        address: fullAddress,
-                        imageUrl: listing.imageUrls.length > 0 ? listing.imageUrls[0] : "https://via.placeholder.com/400x300",
-                        createdAt: listing.createdAt,
-                    };
-                });
-
-                setProperties(mappedProperties);
+                // Keep the full PropertyListing objects from API
+                setProperties(response.data.items);
                 setTotalPages(response.data.pages || 1);
             } catch (error) {
                 console.error("Error fetching properties:", error);
@@ -313,6 +292,13 @@ export default function PropertyManagement() {
 
         fetchProperties();
     }, [filters, sorts, page]);
+
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    }, [page]);
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -407,22 +393,33 @@ export default function PropertyManagement() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {properties.map((property) => (
-                                    <PropertyListItem
-                                        key={property.id}
-                                        id={property.id.toString()}
-                                        title={property.title}
-                                        price={property.price}
-                                        area={property.area}
-                                        address={`${property.addressWard}, ${property.addressDistrict}, ${property.addressCity}`}
-                                        imageUrl={property.imageUrls?.[0] || ""}
-                                        createdAt={property.createdAt}
-                                        approvalStatus={property.approvalStatus as "NONE" | "PENDING" | "APPROVED" | "REJECTED"}
-                                        onClick={() => navigate(`/tin-dang/${property.id}`)}
-                                        onApprove={(id) => handleApproveProperty(id, property.title)}
-                                        onReject={(id) => handleRejectProperty(id, property.title)}
-                                    />
-                                ))}
+                                {properties.map((property) => {
+                                    // Build full address, filtering out empty values
+                                    const addressParts = [
+                                        property.addressStreet,
+                                        property.addressWard,
+                                        property.addressDistrict,
+                                        property.addressCity,
+                                    ].filter(Boolean);
+                                    const fullAddress = addressParts.join(", ");
+
+                                    return (
+                                        <PropertyListItem
+                                            key={property.id}
+                                            id={property.id.toString()}
+                                            title={property.title}
+                                            price={property.price}
+                                            area={property.area}
+                                            address={fullAddress}
+                                            imageUrl={property.imageUrls?.[0] || ""}
+                                            createdAt={property.createdAt}
+                                            approvalStatus={property.approvalStatus as "NONE" | "PENDING" | "APPROVED" | "REJECTED"}
+                                            onClick={() => navigate(`/tin-dang/${property.id}`)}
+                                            onApprove={(id) => handleApproveProperty(id, property.title)}
+                                            onReject={(id) => handleRejectProperty(id, property.title)}
+                                        />
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -457,14 +454,14 @@ export default function PropertyManagement() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={alertDialogLoading}>Hủy</AlertDialogCancel>
+                        <AlertDialogCancel className="cursor-pointer" disabled={alertDialogLoading}>Hủy</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(e) => {
                                 e.preventDefault();
                                 alertDialogConfig?.onConfirm();
                             }}
                             disabled={alertDialogLoading}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
                         >
                             {alertDialogLoading ? "Đang xử lý..." : "Xác nhận"}
                         </AlertDialogAction>

@@ -18,6 +18,7 @@ import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, X,
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
 import { createPreferencePreset } from "@/services/preferencePresetServices";
+import { uploadImage } from "@/services/mediaServices";
 
 // Define form values type
 interface FormValues {
@@ -152,18 +153,22 @@ export default function CreatePreferencePreset() {
 
     // Handle form submit
     const onSubmit = async (data: FormValues) => {
-        if (!imagePreview) {
+        if (!data.image) {
             toast.error("Vui lòng chọn ảnh đại diện");
             return;
         }
 
         setIsSubmitting(true);
         try {
-            // Prepare create data - convert percentages to decimals (0-1 range)
+            // Step 1: Upload image and get URL
+            const uploadResponse = await uploadImage(data.image);
+            const imageUrl = uploadResponse.data.mediaUrl;
+
+            // Step 2: Prepare create data - convert percentages to decimals (0-1 range)
             const createData = {
                 name: data.name,
                 description: data.description,
-                image: "https://s1.media.ngoisao.vn/news/2021/11/07/jack-va-thien-an-5805-tile-ngoisaovn-w1080-h648.jpg",
+                image: imageUrl,
                 preferenceSafety: data.preferenceSafety / 100,
                 preferenceHealthcare: data.preferenceHealthcare / 100,
                 preferenceEducation: data.preferenceEducation / 100,
@@ -173,6 +178,7 @@ export default function CreatePreferencePreset() {
                 preferenceEntertainment: data.preferenceEntertainment / 100,
             };
 
+            // Step 3: Create preference preset with image URL
             await createPreferencePreset(createData);
 
             toast.success("Tạo bộ ưu tiên thành công!");
@@ -278,7 +284,7 @@ export default function CreatePreferencePreset() {
                                 rules={{
                                     required: "Vui lòng chọn ảnh"
                                 }}
-                                render={({ field: { value, onChange, ...field } }) => (
+                                render={({ field: { onChange: _onChange, value: _value, ...field } }) => (
                                     <FormItem>
                                         <FormLabel className="text-gray-700">
                                             Ảnh đại diện <span className="text-red-500">*</span>

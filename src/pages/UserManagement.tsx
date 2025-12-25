@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserListItem } from "@/components/user-list-item";
@@ -121,8 +122,7 @@ export default function UserManagement() {
             setTotalUsers(response.data.records || 0);
             setTotalPages(response.data.pages || 1);
         } catch (error) {
-            console.error("Error fetching users:", error);
-            toast.error("Không thể tải danh sách người dùng");
+            // console.error("Error fetching users:", error);
         } finally {
             setIsLoading(false);
         }
@@ -167,7 +167,6 @@ export default function UserManagement() {
             { key: "phoneNumber", operator: "lk", value: newFilters.phoneNumber || "" },
             { key: "becomeSellerApproveStatus", operator: "eq", value: newFilters.becomeSellerApproveStatus?.id || "" },
         ], true); // Reset page to 1 atomically
-        toast.success("Đã áp dụng bộ lọc");
     };
 
     // Handle Approve User
@@ -185,7 +184,7 @@ export default function UserManagement() {
                     // Refresh users list
                     fetchUsers();
                 } catch (error) {
-                    console.error("Error approving user:", error);
+                    // console.error("Error approving user:", error);
                     toast.error("Có lỗi xảy ra khi duyệt yêu cầu");
                 } finally {
                     setAlertDialogLoading(false);
@@ -215,7 +214,7 @@ export default function UserManagement() {
             // Refresh users list
             fetchUsers();
         } catch (error) {
-            console.error("Error rejecting user:", error);
+            // console.error("Error rejecting user:", error);
             toast.error("Có lỗi xảy ra khi từ chối yêu cầu");
         }
     };

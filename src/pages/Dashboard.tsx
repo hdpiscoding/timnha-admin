@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RejectReasonDialog } from "@/components/reject-reason-dialog";
 import { Loader2 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import {useNavigate} from "react-router-dom";
 
 // Types
 interface PendingUser {
@@ -245,6 +246,7 @@ export default function Dashboard() {
         }
     }, [isLoadingUsers, isLoadingProperties, isInitialLoading]);
 
+    const navigate = useNavigate();
     return (
         <div className="min-h-screen bg-gray-50 p-6 relative">
             {/* Initial Loading Overlay */}
@@ -312,6 +314,7 @@ export default function Dashboard() {
                                         key={user.id}
                                         {...user}
                                         becomeSellerApproveStatus = "PENDING"
+                                        onClick={(id) => navigate(`/nguoi-dung/${id}`)}
                                         onApprove={(id) => handleUserApprovalClick(id, true)}
                                         onReject={(id) => handleUserApprovalClick(id, false)}
                                     />
@@ -388,6 +391,7 @@ export default function Dashboard() {
                                         key={property.id}
                                         {...property}
                                         approvalStatus="PENDING"
+                                        onClick={() => navigate(`/tin-dang/${property.id}`)}
                                         onApprove={(id) => handlePropertyApprovalClick(id, true)}
                                         onReject={(id) => handlePropertyApprovalClick(id, false)}
                                     />

@@ -1,14 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { PreferencePresetListItem } from "@/components/preference-preset-list-item";
 import { ControlledPagination } from "@/components/ui/controlled-pagination";
 import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -19,21 +13,18 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Filter, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import type { PreferencePreset } from "@/types/preference-preset";
 import {useNavigate} from "react-router-dom";
 import { getAllPreferencePresets, deletePreferencePreset } from "@/services/preferencePresetServices";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
-
 export default function PreferencePresetManagement() {
     const [presets, setPresets] = useState<PreferencePreset[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
-    const [sortBy, setSortBy] = useState<SortOption>("newest");
     const navigate = useNavigate();
 
     // Alert Dialog State
@@ -42,7 +33,7 @@ export default function PreferencePresetManagement() {
 
     // Fetch Preference Presets
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchPresets = async (_page: number, _sort: SortOption) => {
+    const fetchPresets = async (_page: number) => {
         setIsLoading(true);
         try {
             const response = await getAllPreferencePresets();
@@ -67,23 +58,10 @@ export default function PreferencePresetManagement() {
             // Note: API doesn't provide pagination info, so we'll show all results on one page
             setTotalPages(1);
         } catch (error) {
-            console.error("Error fetching preference presets:", error);
-            toast.error("Không thể tải danh sách bộ ưu tiên");
+            // Do something
         } finally {
             setIsLoading(false);
         }
-    };
-
-    // Handle Sort Change
-    const handleSortChange = (value: SortOption) => {
-        setSortBy(value);
-        setCurrentPage(1); // Reset to first page when sorting changes
-    };
-
-    // Handle Filter Click
-    const handleFilterClick = () => {
-        // TODO: Implement filter modal or drawer
-        toast.info("Chức năng lọc đang được phát triển");
     };
 
     // Handle Add New Preset
@@ -114,7 +92,7 @@ export default function PreferencePresetManagement() {
             toast.success(`Đã xóa bộ ưu tiên "${presetToDelete.name}" thành công`);
 
             // Refresh list
-            fetchPresets(currentPage, sortBy);
+            fetchPresets(currentPage);
         } catch (error) {
             console.error("Error deleting preset:", error);
             toast.error("Có lỗi xảy ra, vui lòng thử lại");
@@ -126,8 +104,8 @@ export default function PreferencePresetManagement() {
 
     // Effects
     useEffect(() => {
-        fetchPresets(currentPage, sortBy);
-    }, [currentPage, sortBy]);
+        fetchPresets(currentPage);
+    }, [currentPage]);
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -150,39 +128,6 @@ export default function PreferencePresetManagement() {
                             <Plus className="w-4 h-4" />
                             Thêm mới
                         </Button>
-                    </div>
-                </div>
-
-                {/* Filters and Sort Section */}
-                <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                        {/* Filter Button */}
-                        <Button
-                            onClick={handleFilterClick}
-                            variant="outline"
-                            className="flex items-center gap-2"
-                        >
-                            <Filter className="w-4 h-4" />
-                            Lọc
-                        </Button>
-
-                        {/* Sort Select */}
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <span className="text-sm text-gray-600 whitespace-nowrap">
-                                Sắp xếp:
-                            </span>
-                            <Select value={sortBy} onValueChange={handleSortChange}>
-                                <SelectTrigger className="w-full sm:w-[200px]">
-                                    <SelectValue placeholder="Chọn cách sắp xếp" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="newest">Mới nhất</SelectItem>
-                                    <SelectItem value="oldest">Cũ nhất</SelectItem>
-                                    <SelectItem value="name-asc">Tên A-Z</SelectItem>
-                                    <SelectItem value="name-desc">Tên Z-A</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
                     </div>
                 </div>
 

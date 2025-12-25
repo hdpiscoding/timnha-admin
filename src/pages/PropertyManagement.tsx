@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { PropertyListItem } from "@/components/property-list-item";
 import { ControlledPagination } from "@/components/ui/controlled-pagination";
@@ -137,7 +138,6 @@ export default function PropertyManagement() {
             { key: "numBathrooms", operator: "eq", value: newFilters.numBathrooms || "" },
             { key: "numFloors", operator: "eq", value: newFilters.numFloors || "" },
         ], true);
-        toast.success("Đã áp dụng bộ lọc");
     };
 
     // Handle Approve Property
@@ -155,7 +155,6 @@ export default function PropertyManagement() {
                     // Trigger re-fetch
                     setPage(page);
                 } catch (error) {
-                    console.error("Error approving property:", error);
                     toast.error("Có lỗi xảy ra khi duyệt tin đăng");
                 } finally {
                     setAlertDialogLoading(false);
@@ -283,8 +282,7 @@ export default function PropertyManagement() {
                 setProperties(response.data.items);
                 setTotalPages(response.data.pages || 1);
             } catch (error) {
-                console.error("Error fetching properties:", error);
-                toast.error("Không thể tải danh sách tin đăng");
+                // console.error("Error fetching properties:", error);
             } finally {
                 setIsLoading(false);
             }

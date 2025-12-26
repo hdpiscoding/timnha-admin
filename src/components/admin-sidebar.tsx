@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'react-toastify';
 import {useUserStore} from "@/stores/userStore.ts";
+import logo from "@/assets/timnha-portrait.png";
 
 interface SidebarItemProps {
     icon: React.ReactNode;
@@ -145,7 +146,7 @@ export const AdminSidebar: React.FC = () => {
                         className="flex flex-col items-center justify-center w-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#008DDA] focus:ring-offset-2 rounded-lg p-2 cursor-pointer"
                     >
                         <img
-                            src="/src/assets/timnha-icon.png"
+                            src={logo}
                             alt="TimNha Admin"
                             className="h-16 w-auto drop-shadow-sm"
                         />

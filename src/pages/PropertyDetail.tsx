@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { CircularProgress } from "@/components/ui/circular-progress";
 import {
     Carousel,
     CarouselContent,
@@ -30,13 +32,39 @@ import {
     Maximize,
     Layers,
     Calendar,
-    Building2, Loader2,
+    Building2,
+    Loader2,
+    TrendingUp,
+    Shield,
+    GraduationCap,
+    ShoppingBag,
+    Car,
+    Leaf,
+    Music,
+    Heart,
+    AlertTriangle,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import ReactMarkdown from 'react-markdown';
 import type { PropertyListing } from "@/types/property-listing";
 import {formatDateTime, formatPrice} from "@/utils/generalFormat.ts";
 import StaticMarkerMap from "@/components/static-marker-map";
-import { getPropertyDetails, approveListingRequest } from "@/services/propertyServices";
+import { getPropertyDetails, approveListingRequest, predictPropertyPrice } from "@/services/propertyServices";
+
+interface EstimationData {
+    predicted_price_billions?: number;
+    livability_score?: number;
+    ai_insight?: string;
+    component_scores?: {
+        score_public_safety?: number;
+        score_healthcare?: number;
+        score_education?: number;
+        score_shopping?: number;
+        score_transportation?: number;
+        score_environment?: number;
+        score_entertainment?: number;
+    };
+}
 
 export default function PropertyDetail() {
     const navigate = useNavigate();
@@ -45,6 +73,12 @@ export default function PropertyDetail() {
     const [isLoading, setIsLoading] = useState(true);
     const [approveDialogOpen, setApproveDialogOpen] = useState(false);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+    const [priceWarningDialogOpen, setPriceWarningDialogOpen] = useState(false);
+
+    // Estimation states
+    const [estimationData, setEstimationData] = useState<EstimationData | null>(null);
+    const [isEstimationLoading, setIsEstimationLoading] = useState(false);
+    const [estimationError, setEstimationError] = useState(false);
 
     // Fetch property data
     useEffect(() => {
@@ -71,8 +105,79 @@ export default function PropertyDetail() {
         fetchProperty();
     }, [id, navigate]);
 
+    // Fetch estimation data when property is PENDING
+    useEffect(() => {
+        const fetchEstimation = async () => {
+            if (!property || property.approvalStatus !== "PENDING") {
+                return;
+            }
+
+            setIsEstimationLoading(true);
+            setEstimationError(false);
+
+            try {
+                // Map property type to API format
+                const propertyTypeMap: Record<string, string> = {
+                    apartment: "apartment",
+                    house: "house",
+                    villa: "villa",
+                    townhouse: "townhouse",
+                    land: "land",
+                };
+
+                const requestData = {
+                    latitude: property.location.coordinates[1],
+                    longitude: property.location.coordinates[0],
+                    address_district: property.addressDistrict || "",
+                    area: property.area,
+                    property_type: propertyTypeMap[property.propertyType] || property.propertyType,
+                    ...(property.numBedrooms !== null && { num_bedrooms: property.numBedrooms }),
+                    ...(property.numBathrooms !== null && { num_bathrooms: property.numBathrooms }),
+                    ...(property.numFloors !== null && { num_floors: property.numFloors }),
+                    ...(property.facadeWidthM !== null && { facade_width_m: property.facadeWidthM }),
+                    ...(property.roadWidthM !== null && { road_width_m: property.roadWidthM }),
+                    ...(property.legalStatus && { legal_status: property.legalStatus }),
+                    ...(property.houseDirection && { house_direction: property.houseDirection }),
+                    ...(property.balconyDirection && { balcony_direction: property.balconyDirection }),
+                    ...(property.furnitureStatus && { furniture_status: property.furnitureStatus }),
+                    full_address: property.addressStreet ? `${property.addressStreet}, ${property.addressWard}, ${property.addressDistrict}, ${property.addressCity}` : `${property.addressWard}, ${property.addressDistrict}, ${property.addressCity}`
+                };
+
+                const response = await predictPropertyPrice(requestData);
+                setEstimationData(response.data);
+            } catch (error) {
+                console.error("Error fetching estimation:", error);
+                setEstimationError(true);
+            } finally {
+                setIsEstimationLoading(false);
+            }
+        };
+
+        fetchEstimation();
+    }, [property]);
+
     // Handle Approve
     const handleApprove = () => {
+        // Check if listing price is more than 15% higher than predicted price
+        if (estimationData?.predicted_price_billions && property) {
+            const predictedPriceVND = estimationData.predicted_price_billions * 1000000000;
+            const listingPriceVND = property.price;
+            const priceDifferencePercent = ((listingPriceVND - predictedPriceVND) / predictedPriceVND) * 100;
+
+            if (priceDifferencePercent > 15) {
+                // Show warning dialog first
+                setPriceWarningDialogOpen(true);
+                return;
+            }
+        }
+
+        // If no warning needed, show approve dialog directly
+        setApproveDialogOpen(true);
+    };
+
+    const handlePriceWarningConfirm = () => {
+        // User acknowledged the warning, proceed to approve dialog
+        setPriceWarningDialogOpen(false);
         setApproveDialogOpen(true);
     };
 
@@ -246,7 +351,7 @@ export default function PropertyDetail() {
                         <div className="flex items-start gap-2 text-gray-700">
                             <MapPin className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
                             <span className="text-lg">
-                                {property.addressWard}, {property.addressDistrict}, {property.addressCity}
+                                {property.addressStreet ? property.addressStreet + ", ": ""}{property.addressWard}, {property.addressDistrict}, {property.addressCity}
                             </span>
                         </div>
                     </div>
@@ -267,6 +372,7 @@ export default function PropertyDetail() {
                                 <Button
                                     onClick={handleApprove}
                                     className="bg-green-600 hover:bg-green-700 cursor-pointer flex-1 sm:flex-none"
+                                    disabled={isEstimationLoading}
                                 >
                                     <Check className="w-4 h-4 mr-2" />
                                     Duyệt
@@ -275,6 +381,7 @@ export default function PropertyDetail() {
                                     onClick={handleReject}
                                     variant="destructive"
                                     className="cursor-pointer hover:bg-red-700 flex-1 sm:flex-none"
+                                    disabled={isEstimationLoading}
                                 >
                                     <X className="w-4 h-4 mr-2" />
                                     Từ chối
@@ -283,6 +390,134 @@ export default function PropertyDetail() {
                         )}
                     </div>
                 </div>
+
+                {/* Estimation Section - Show only if PENDING */}
+                {property.approvalStatus === "PENDING" && (
+                    <>
+                        {isEstimationLoading && (
+                            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                                <div className="flex flex-col items-center gap-4 py-8">
+                                    <Loader2 className="w-12 h-12 text-[#008DDA] animate-spin" />
+                                    <p className="text-gray-600 font-medium">Đang định giá bất động sản...</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {!isEstimationLoading && estimationError && (
+                            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                                <div className="text-center py-8">
+                                    <p className="text-gray-600">Không thể tải thông tin định giá</p>
+                                    <p className="text-sm text-gray-500 mt-2">Hệ thống định giá tạm thời không khả dụng</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {!isEstimationLoading && !estimationError && estimationData && (
+                            <>
+                                {/* Estimation Header Card */}
+                                <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 border border-gray-200">
+                                    <div className="text-center mb-6">
+                                        <h2 className="text-2xl sm:text-3xl font-semibold mb-2">ĐỊNH GIÁ TỰ ĐỘNG</h2>
+                                        <p className="text-sm text-gray-500">Phân tích từ hệ thống AI</p>
+                                    </div>
+
+                                    {/* Price and Livability Score */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                        {/* Estimated Price */}
+                                        <div className="text-center">
+                                            <div className="flex items-center justify-center gap-2 mb-3">
+                                                <TrendingUp className="w-5 h-5 text-[#008DDA]" />
+                                                <p className="text-sm sm:text-base text-gray-600 font-medium">
+                                                    Giá ước tính
+                                                </p>
+                                            </div>
+                                            <p className="text-4xl sm:text-5xl font-bold text-[#008DDA] mb-2">
+                                                {estimationData.predicted_price_billions?.toFixed(2) || "N/A"} tỷ VNĐ
+                                            </p>
+                                            {property.area && estimationData.predicted_price_billions && (
+                                                <p className="text-sm text-gray-500">
+                                                    ≈ {formatPrice((estimationData.predicted_price_billions * 1000000000) / property.area)}/m²
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Livability Score */}
+                                        <div className="flex flex-col items-center">
+                                            <p className="text-sm sm:text-base text-gray-600 font-medium mb-4">
+                                                Chỉ số sống
+                                            </p>
+                                            <CircularProgress
+                                                value={Math.round(estimationData.livability_score || 0)}
+                                                size={140}
+                                                strokeWidth={10}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Component Scores Card */}
+                                {estimationData.component_scores && (
+                                    <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 border border-gray-200">
+                                        <h3 className="text-xl font-semibold mb-6 text-center">Các chỉ số chi tiết</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {[
+                                                { key: 'score_public_safety' as const, label: 'An ninh', icon: Shield, color: '#f97316' },
+                                                { key: 'score_healthcare' as const, label: 'Y tế', icon: Heart, color: '#ef4444' },
+                                                { key: 'score_education' as const, label: 'Giáo dục', icon: GraduationCap, color: '#8b5cf6' },
+                                                { key: 'score_shopping' as const, label: 'Tiện ích', icon: ShoppingBag, color: '#22c55e' },
+                                                { key: 'score_transportation' as const, label: 'Giao thông', icon: Car, color: '#eab308' },
+                                                { key: 'score_environment' as const, label: 'Môi trường', icon: Leaf, color: '#14b8a6' },
+                                                { key: 'score_entertainment' as const, label: 'Giải trí', icon: Music, color: '#ec4899' },
+                                            ].map(({ key, label, icon: Icon, color }) => {
+                                                const score = estimationData.component_scores?.[key] || 0;
+                                                return (
+                                                    <div key={key} className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <Icon className="w-5 h-5" style={{ color }} />
+                                                                <span className="text-sm font-medium text-gray-700">{label}</span>
+                                                            </div>
+                                                            <span className="text-sm font-semibold" style={{ color }}>
+                                                                {score.toFixed(1)}
+                                                            </span>
+                                                        </div>
+                                                        <Progress
+                                                            value={score}
+                                                            className="h-2"
+                                                            indicatorColor={color}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* AI Insight Card */}
+                                {estimationData.ai_insight && (
+                                    <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 border border-gray-200">
+                                        <h3 className="text-xl font-semibold mb-4">Phân tích chi tiết từ AI</h3>
+                                        <div className="prose prose-sm sm:prose max-w-none text-gray-700">
+                                            <ReactMarkdown
+                                                components={{
+                                                    h2: ({ children }) => <h2 className="text-lg font-semibold mt-4 mb-2">{children}</h2>,
+                                                    h3: ({ children }) => <h3 className="text-base font-semibold mt-3 mb-2">{children}</h3>,
+                                                    p: ({ children }) => <p className="mb-3 leading-relaxed">{children}</p>,
+                                                    strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                                                    ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+                                                    ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+                                                    li: ({ children }) => <li className="ml-2">{children}</li>,
+                                                }}
+                                            >
+                                                {estimationData.ai_insight}
+                                            </ReactMarkdown>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </>
+                )}
 
                 {/* Property Details */}
                 <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
@@ -400,6 +635,65 @@ export default function PropertyDetail() {
                 </div>
             </div>
 
+            {/* Price Warning Dialog */}
+            <AlertDialog open={priceWarningDialogOpen} onOpenChange={setPriceWarningDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <AlertDialogTitle className="text-xl">Cảnh báo giá cao</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription className="space-y-3 pt-2">
+                            <p className="text-base">
+                                Giá tin đăng quá cao so với giá dự đoán từ hệ thống AI.
+                            </p>
+                            {estimationData?.predicted_price_billions && property && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-600">Giá tin đăng:</span>
+                                        <span className="font-semibold text-gray-900">
+                                            {formatPrice(property.price)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-600">Giá dự đoán:</span>
+                                        <span className="font-semibold text-gray-900">
+                                            {estimationData.predicted_price_billions.toFixed(2)} tỷ VNĐ
+                                        </span>
+                                    </div>
+                                    <div className="border-t border-yellow-200 pt-2 mt-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-600">Chênh lệch:</span>
+                                            <span className="font-bold text-yellow-600">
+                                                +{(((property.price - (estimationData.predicted_price_billions * 1000000000)) / (estimationData.predicted_price_billions * 1000000000)) * 100).toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-sm text-gray-600 italic">
+                                <strong>Lý do:</strong> Giá niêm yết cao hơn đáng kể so với mức giá thị trường được hệ thống đánh giá.
+                                Vui lòng xem xét kỹ trước khi duyệt tin đăng này.
+                            </p>
+                            <p className="text-sm font-medium">
+                                Bạn có muốn tiếp tục duyệt tin đăng này không?
+                            </p>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="cursor-pointer">Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handlePriceWarningConfirm}
+                            className="bg-yellow-600 hover:bg-yellow-700 cursor-pointer"
+                        >
+                            Tiếp tục duyệt
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Approve Dialog */}
             <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
                 <AlertDialogContent>
@@ -411,10 +705,10 @@ export default function PropertyDetail() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogCancel className="cursor-pointer">Hủy</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleApproveConfirm}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
                         >
                             Xác nhận
                         </AlertDialogAction>
@@ -433,10 +727,10 @@ export default function PropertyDetail() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogCancel className="cursor-pointer">Hủy</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleRejectConfirm}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-[#008DDA] hover:bg-[#0077b6] cursor-pointer"
                         >
                             Xác nhận
                         </AlertDialogAction>

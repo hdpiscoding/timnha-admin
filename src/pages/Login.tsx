@@ -16,6 +16,7 @@ import {Spinner} from "@/components/ui/spinner.tsx";
 import {login} from "@/services/authServices.ts";
 import {useUserStore} from "@/stores/userStore.ts";
 import {toast} from "react-toastify";
+import logo from "@/assets/timnha-portrait.png";
 
 export default function Login() {
     const navigate = useNavigate();
@@ -53,7 +54,7 @@ export default function Login() {
             <div className="hidden lg:flex lg:w-[30%] bg-white flex-col items-center justify-center p-8">
                 <div className="text-center space-y-6">
                     <img
-                        src="/src/assets/timnha-portrait.png"
+                        src={logo}
                         alt="TimNha Logo"
                         className="w-48 h-auto mx-auto"
                     />

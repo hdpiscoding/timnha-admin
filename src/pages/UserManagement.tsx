@@ -114,7 +114,7 @@ export default function UserManagement() {
             const response = await searchUsers({
                 filters: apiFilters,
                 sorts: apiSorts,
-                rpp: 2,
+                rpp: 5,
                 page: page,
             });
 

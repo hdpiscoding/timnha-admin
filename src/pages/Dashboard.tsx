@@ -262,7 +262,7 @@ export default function Dashboard() {
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                    <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">Bảng điều khiển</h1>
                     <p className="text-gray-600 mt-2">Quản lý yêu cầu duyệt người bán và tin đăng</p>
                 </div>
 

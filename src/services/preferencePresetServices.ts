@@ -46,3 +46,8 @@ export const deletePreferencePreset = async (id: number) => {
     const response = await instance.delete(`user/admin/preference-presets/${id}`);
     return response.data;
 }
+
+export const suggestPreferencePreset = async (presetId: number) => {
+    const response = await instance.get(`user/preference-presets/suggestion/${presetId}`);
+    return response.data;
+}

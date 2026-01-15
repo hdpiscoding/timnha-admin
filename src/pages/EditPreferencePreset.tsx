@@ -14,11 +14,12 @@ import {
     FormMessage,
     FormDescription
 } from "@/components/ui/form";
-import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, Loader2 } from "lucide-react";
+import { Shield, Heart, GraduationCap, ShoppingBag, Car, Leaf, Music, Upload, Loader2, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
-import { getPreferencePresetById, updatePreferencePreset } from "@/services/preferencePresetServices";
+import { getPreferencePresetById, updatePreferencePreset, suggestPreferencePreset } from "@/services/preferencePresetServices";
 import { uploadImage } from "@/services/mediaServices";
+import { Progress } from "@/components/ui/progress";
 
 // Define form values type
 interface FormValues {
@@ -48,49 +49,49 @@ const preferenceConfig: PreferenceItem[] = [
         label: 'An ninh',
         icon: Shield,
         color: 'bg-blue-100 text-blue-600',
-        barColor: 'bg-blue-500'
+        barColor: '#3b82f6'
     },
     {
         key: 'preferenceHealthcare',
         label: 'Y tế',
         icon: Heart,
         color: 'bg-red-100 text-red-600',
-        barColor: 'bg-red-500'
+        barColor: '#ef4444'
     },
     {
         key: 'preferenceEducation',
         label: 'Giáo dục',
         icon: GraduationCap,
         color: 'bg-purple-100 text-purple-600',
-        barColor: 'bg-purple-500'
+        barColor: '#a855f7'
     },
     {
         key: 'preferenceShopping',
         label: 'Tiện ích',
         icon: ShoppingBag,
         color: 'bg-green-100 text-green-600',
-        barColor: 'bg-green-500'
+        barColor: '#22c55e'
     },
     {
         key: 'preferenceTransportation',
         label: 'Giao thông',
         icon: Car,
         color: 'bg-yellow-100 text-yellow-600',
-        barColor: 'bg-yellow-500'
+        barColor: '#eab308'
     },
     {
         key: 'preferenceEnvironment',
         label: 'Môi trường',
         icon: Leaf,
         color: 'bg-teal-100 text-teal-600',
-        barColor: 'bg-teal-500'
+        barColor: '#14b8a6'
     },
     {
         key: 'preferenceEntertainment',
         label: 'Giải trí',
         icon: Music,
         color: 'bg-pink-100 text-pink-600',
-        barColor: 'bg-pink-500'
+        barColor: '#ec4899'
     },
 ];
 
@@ -100,6 +101,18 @@ export default function EditPreferencePreset() {
     const [imagePreview, setImagePreview] = useState<string>("");
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuggestionLoading, setIsSuggestionLoading] = useState(false);
+    const [suggestionData, setSuggestionData] = useState<{
+        sourcePresetName: string;
+        totalAdaptations: number;
+        avgSafety: number;
+        avgEducation: number;
+        avgShopping: number;
+        avgTransportation: number;
+        avgEnvironment: number;
+        avgEntertainment: number;
+        avgHealthcare: number;
+    } | null>(null);
 
     // Initialize React Hook Form
     const form = useForm<FormValues>({
@@ -148,6 +161,9 @@ export default function EditPreferencePreset() {
                 // Set image preview from API
                 setImagePreview(response.data.image);
 
+                // Fetch suggestion data
+                fetchSuggestion(Number(id));
+
             } catch (error) {
                 console.error("Error fetching preference preset:", error);
                 toast.error("Không thể tải dữ liệu bộ ưu tiên");
@@ -159,6 +175,35 @@ export default function EditPreferencePreset() {
 
         fetchPreferencePreset();
     }, [id, navigate, form]);
+
+    // Fetch suggestion data
+    const fetchSuggestion = async (presetId: number) => {
+        setIsSuggestionLoading(true);
+        try {
+            const response = await suggestPreferencePreset(presetId);
+            setSuggestionData(response.data);
+        } catch (error) {
+            console.error("Error fetching suggestion:", error);
+            // Don't show error toast, just silently fail
+        } finally {
+            setIsSuggestionLoading(false);
+        }
+    };
+
+    // Apply suggested preferences
+    const applySuggestion = () => {
+        if (!suggestionData) return;
+
+        form.setValue('preferenceSafety', Math.round(suggestionData.avgSafety * 100));
+        form.setValue('preferenceHealthcare', Math.round(suggestionData.avgHealthcare * 100));
+        form.setValue('preferenceEducation', Math.round(suggestionData.avgEducation * 100));
+        form.setValue('preferenceShopping', Math.round(suggestionData.avgShopping * 100));
+        form.setValue('preferenceTransportation', Math.round(suggestionData.avgTransportation * 100));
+        form.setValue('preferenceEnvironment', Math.round(suggestionData.avgEnvironment * 100));
+        form.setValue('preferenceEntertainment', Math.round(suggestionData.avgEntertainment * 100));
+
+        toast.success("Đã áp dụng gợi ý thành công!");
+    };
 
     // Handle image upload
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -399,6 +444,115 @@ export default function EditPreferencePreset() {
                                     </FormItem>
                                 )}
                             />
+                        </div>
+
+                        {/* Suggestion Section */}
+                        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                                        <Lightbulb className="w-5 h-5 text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-semibold text-gray-900">
+                                            Gợi ý chỉnh sửa độ ưu tiên
+                                        </h2>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            Dựa trên hành vi của người dùng với bộ ưu tiên này
+                                        </p>
+                                    </div>
+                                </div>
+                                {suggestionData && !isSuggestionLoading && (
+                                    <Button
+                                        type="button"
+                                        onClick={applySuggestion}
+                                        className="bg-amber-500 hover:bg-amber-600 text-white cursor-pointer"
+                                    >
+                                        <Lightbulb className="w-4 h-4 mr-2" />
+                                        Áp dụng gợi ý
+                                    </Button>
+                                )}
+                            </div>
+
+                            {isSuggestionLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-3" />
+                                    <p className="text-gray-600 text-sm">Đang tải gợi ý...</p>
+                                </div>
+                            ) : suggestionData ? (
+                                <div className="space-y-6">
+                                    {/* Suggestion Info */}
+                                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-gray-600">Nguồn gợi ý</p>
+                                                <p className="text-base font-semibold text-gray-900">
+                                                    {suggestionData.sourcePresetName}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Số lần điều chỉnh</p>
+                                                <p className="text-base font-semibold text-gray-900">
+                                                    {suggestionData.totalAdaptations} lần
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Suggested Preferences */}
+                                    <div className="space-y-5">
+                                        {preferenceConfig.map((config) => {
+                                            const Icon = config.icon;
+                                            const key = config.key.replace('preference', 'avg');
+                                            const suggestionKey = key.charAt(0).toLowerCase() + key.slice(1) as keyof typeof suggestionData;
+                                            const value = Math.round((suggestionData[suggestionKey] as number) * 100);
+
+                                            return (
+                                                <div key={config.key} className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn(
+                                                                "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
+                                                                config.color
+                                                            )}>
+                                                                <Icon className="w-4 h-4" />
+                                                            </div>
+                                                            <span className="text-sm font-medium text-gray-700">
+                                                                {config.label}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-lg font-bold text-gray-900 min-w-[50px] text-right">
+                                                                {value}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500">
+                                                                / 100
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <Progress
+                                                        value={value}
+                                                        className="h-2"
+                                                        indicatorColor={config.barColor}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12 text-center">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                        <Lightbulb className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <p className="text-gray-600 text-sm">
+                                        Không có gợi ý nào cho bộ ưu tiên này
+                                    </p>
+                                    <p className="text-gray-500 text-xs mt-1">
+                                        Gợi ý sẽ được tạo khi có người dùng điều chỉnh bộ ưu tiên
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Preferences */}

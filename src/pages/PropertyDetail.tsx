@@ -464,7 +464,7 @@ export default function PropertyDetail() {
                                                 { key: 'score_public_safety' as const, label: 'An ninh', icon: Shield, color: '#f97316' },
                                                 { key: 'score_healthcare' as const, label: 'Y tế', icon: Heart, color: '#ef4444' },
                                                 { key: 'score_education' as const, label: 'Giáo dục', icon: GraduationCap, color: '#8b5cf6' },
-                                                { key: 'score_shopping' as const, label: 'Tiện ích', icon: ShoppingBag, color: '#22c55e' },
+                                                { key: 'score_shopping' as const, label: 'Mua sắm', icon: ShoppingBag, color: '#22c55e' },
                                                 { key: 'score_transportation' as const, label: 'Giao thông', icon: Car, color: '#eab308' },
                                                 { key: 'score_environment' as const, label: 'Môi trường', icon: Leaf, color: '#14b8a6' },
                                                 { key: 'score_entertainment' as const, label: 'Giải trí', icon: Music, color: '#ec4899' },

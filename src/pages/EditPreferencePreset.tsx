@@ -48,49 +48,49 @@ const preferenceConfig: PreferenceItem[] = [
         key: 'preferenceSafety',
         label: 'An ninh',
         icon: Shield,
-        color: 'bg-blue-100 text-blue-600',
+        color: 'bg-orange-100 text-orange-500',
         barColor: '#3b82f6'
     },
     {
         key: 'preferenceHealthcare',
         label: 'Y tế',
         icon: Heart,
-        color: 'bg-red-100 text-red-600',
+        color: 'bg-red-100 text-red-500',
         barColor: '#ef4444'
     },
     {
         key: 'preferenceEducation',
         label: 'Giáo dục',
         icon: GraduationCap,
-        color: 'bg-purple-100 text-purple-600',
+        color: 'bg-purple-100 text-purple-500',
         barColor: '#a855f7'
     },
     {
         key: 'preferenceShopping',
-        label: 'Tiện ích',
+        label: 'Mua sắm',
         icon: ShoppingBag,
-        color: 'bg-green-100 text-green-600',
+        color: 'bg-green-100 text-green-500',
         barColor: '#22c55e'
     },
     {
         key: 'preferenceTransportation',
         label: 'Giao thông',
         icon: Car,
-        color: 'bg-yellow-100 text-yellow-600',
+        color: 'bg-yellow-100 text-yellow-500',
         barColor: '#eab308'
     },
     {
         key: 'preferenceEnvironment',
         label: 'Môi trường',
         icon: Leaf,
-        color: 'bg-teal-100 text-teal-600',
+        color: 'bg-teal-100 text-teal-500',
         barColor: '#14b8a6'
     },
     {
         key: 'preferenceEntertainment',
         label: 'Giải trí',
         icon: Music,
-        color: 'bg-pink-100 text-pink-600',
+        color: 'bg-pink-100 text-pink-500',
         barColor: '#ec4899'
     },
 ];

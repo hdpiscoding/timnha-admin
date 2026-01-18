@@ -42,7 +42,7 @@ import {
     Leaf,
     Music,
     Heart,
-    AlertTriangle,
+    AlertTriangle, CloudRain, Milestone,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import ReactMarkdown from 'react-markdown';
@@ -56,13 +56,16 @@ interface EstimationData {
     livability_score?: number;
     ai_insight?: string;
     component_scores?: {
-        score_public_safety?: number;
+        score_safety?: number;
         score_healthcare?: number;
         score_education?: number;
         score_shopping?: number;
         score_transportation?: number;
         score_environment?: number;
         score_entertainment?: number;
+        flood_impact_score?: number;
+        accident_impact_score?: number;
+        future_project_score?: number;
     };
 }
 
@@ -461,13 +464,16 @@ export default function PropertyDetail() {
                                         <h3 className="text-xl font-semibold mb-6 text-center">Các chỉ số chi tiết</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {[
-                                                { key: 'score_public_safety' as const, label: 'An ninh', icon: Shield, color: '#f97316' },
+                                                { key: 'score_safety' as const, label: 'An ninh', icon: Shield, color: '#f97316' },
                                                 { key: 'score_healthcare' as const, label: 'Y tế', icon: Heart, color: '#ef4444' },
                                                 { key: 'score_education' as const, label: 'Giáo dục', icon: GraduationCap, color: '#8b5cf6' },
                                                 { key: 'score_shopping' as const, label: 'Mua sắm', icon: ShoppingBag, color: '#22c55e' },
                                                 { key: 'score_transportation' as const, label: 'Giao thông', icon: Car, color: '#eab308' },
                                                 { key: 'score_environment' as const, label: 'Môi trường', icon: Leaf, color: '#14b8a6' },
                                                 { key: 'score_entertainment' as const, label: 'Giải trí', icon: Music, color: '#ec4899' },
+                                                { key: 'flood_impact_score' as const, label: 'Ngập lụt', icon: CloudRain, color: '#6366F1' },
+                                                { key: 'accident_impact_score' as const, label: 'Tai nạn', icon: AlertTriangle, color: '#F43F5E' },
+                                                { key: 'future_project_score' as const, label: 'Tiềm năng', icon: Milestone, color: '#06B6D4' },
                                             ].map(({ key, label, icon: Icon, color }) => {
                                                 const score = estimationData.component_scores?.[key] || 0;
                                                 return (
